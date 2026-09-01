@@ -20,4 +20,13 @@
 ### Estado do registo
 
 - Foi inicializado um repositório Git local porque a workspace não continha histórico Git.
-- O commit deste snapshot ficou pendente devido à indisponibilidade do executor Git no ambiente restrito.
+- O snapshot inicial foi registado no commit `e995d09`.
+
+### Qualidade e segurança
+
+- A extração de documentos passou a exigir uma sessão autenticada.
+- A aplicação mobile passou a enviar o token de autenticação nos pedidos de extração.
+- A API recusa arrancar em produção quando é usado o segredo JWT de desenvolvimento.
+- Foram adicionados testes para autenticação, isolamento de dados, persistência de tarefas e documentos e extração de texto.
+- Foram removidas dependências Expo incompatíveis e não utilizadas.
+- As restantes dependências foram alinhadas com o Expo SDK 57, eliminando os alertas altos da auditoria npm.

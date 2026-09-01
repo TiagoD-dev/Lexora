@@ -75,14 +75,14 @@ class CasePayload(BaseModel):
     status: str
     createdAt: str
     updatedAt: str
-    notes: list[dict[str, Any]] = []
-    tasks: list[dict[str, Any]] = []
-    documents: list[dict[str, Any]] = []
-    timeline: list[dict[str, Any]] = []
-    entities: list[dict[str, Any]] = []
-    facts: list[dict[str, Any]] = []
-    legalIssues: list[dict[str, Any]] = []
-    missingFacts: list[dict[str, Any]] = []
+    notes: list[dict[str, Any]] = Field(default_factory=list)
+    tasks: list[dict[str, Any]] = Field(default_factory=list)
+    documents: list[dict[str, Any]] = Field(default_factory=list)
+    timeline: list[dict[str, Any]] = Field(default_factory=list)
+    entities: list[dict[str, Any]] = Field(default_factory=list)
+    facts: list[dict[str, Any]] = Field(default_factory=list)
+    legalIssues: list[dict[str, Any]] = Field(default_factory=list)
+    missingFacts: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class CaseUpdate(BaseModel):

@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 from . import models
 from .db import get_db
 
-JWT_SECRET = os.environ.get("LEXORA_JWT_SECRET", "dev-secret-change-me")
+DEFAULT_JWT_SECRET = "dev-secret-change-me-at-least-32-bytes"
+JWT_SECRET = os.environ.get("LEXORA_JWT_SECRET", DEFAULT_JWT_SECRET)
+APP_ENV = os.environ.get("LEXORA_ENV", "development").strip().lower()
+if APP_ENV == "production" and JWT_SECRET == DEFAULT_JWT_SECRET:
+    raise RuntimeError("LEXORA_JWT_SECRET tem de ser definido com um valor seguro em produção.")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRES_DAYS = 30
 

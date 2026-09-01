@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { createCaseRemote, deleteCaseRemote, listCasesRemote, updateCaseRemote } from '@/services/cases-service';
@@ -136,7 +136,7 @@ export function CasesProvider({ children }: { children: ReactNode }) {
   const addLegalIssue = (id: string, title: string) => mutate(id, (item) => touch({ ...item, legalIssues: [...item.legalIssues, { id: uid(), title, status: 'Identificada' } as LegalIssue] }));
   const addMissingFact = (id: string, question: string) => mutate(id, (item) => touch({ ...item, missingFacts: [...item.missingFacts, { id: uid(), question, resolved: false } as MissingFact] }));
   const toggleMissingFact = (caseId: string, missingFactId: string) => mutate(caseId, (item) => touch({ ...item, missingFacts: item.missingFacts.map((fact) => fact.id === missingFactId ? { ...fact, resolved: !fact.resolved } : fact) }));
-  const value = useMemo(() => ({ cases, hydrated, getCase: (id: string) => cases.find((item) => item.id === id), createCase, updateCase, archiveCase, deleteCase, syncClientName, addNote, addTask, updateTask, deleteTask, toggleTask, addDocument, updateDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact }), [cases, hydrated]);
+  const value = { cases, hydrated, getCase: (id: string) => cases.find((item) => item.id === id), createCase, updateCase, archiveCase, deleteCase, syncClientName, addNote, addTask, updateTask, deleteTask, toggleTask, addDocument, updateDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact };
   return <CasesContext.Provider value={value}>{children}</CasesContext.Provider>;
 }
 

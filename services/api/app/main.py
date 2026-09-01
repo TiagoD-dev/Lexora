@@ -3,13 +3,15 @@ import re
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy import text
 
+from . import models
 from .db import Base, engine
 from .routers import auth, cases, clients
+from .security import get_current_user
 
 Base.metadata.create_all(bind=engine)
 
@@ -108,7 +110,10 @@ def build_suggestions(text: str) -> list[dict]:
 
 
 @app.post("/documents/extract", tags=["documents"])
-async def extract_document(file: UploadFile = File(...)) -> dict:
+async def extract_document(
+    file: UploadFile = File(...),
+    _current_user: models.User = Depends(get_current_user),
+) -> dict:
     content = await file.read(MAX_FILE_SIZE + 1)
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(413, "O ficheiro excede o limite de 25 MB.")

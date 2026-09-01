@@ -40,7 +40,7 @@ export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial
     <Text style={styles.sectionLabel}>ASSUNTO E CLIENTE</Text>
     <View style={styles.card}>
       <AppInput label="Título do caso *" value={value.title} onChangeText={(text) => set('title', text)} placeholder="Ex.: Cessação do contrato" />
-      {availableClients.length > 0 ? <SelectField label="Cliente *" value={value.client || 'Selecionar cliente'} options={availableClients.map((client) => client.name)} onChange={(name) => { const client = availableClients.find((item) => item.name === name); setValue((current) => ({ ...current, client: name, clientId: client?.id })); }} /> : <Text style={styles.helper}>Ainda não existem clientes. Cria primeiro uma ficha em "Clientes".</Text>}
+      {availableClients.length > 0 ? <SelectField label="Cliente *" value={value.client || 'Selecionar cliente'} options={availableClients.map((client) => client.name)} onChange={(name) => { const client = availableClients.find((item) => item.name === name); setValue((current) => ({ ...current, client: name, clientId: client?.id })); }} /> : <Text style={styles.helper}>Ainda não existem clientes. Cria primeiro uma ficha em Clientes.</Text>}
       <SelectField label="Área jurídica" value={value.area} options={LEGAL_AREAS} onChange={(area) => set('area', area)} />
     </View>
 

@@ -30,7 +30,8 @@
           "image": "./assets/images/lexora-adaptive.png",
           "imageWidth": 112
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
