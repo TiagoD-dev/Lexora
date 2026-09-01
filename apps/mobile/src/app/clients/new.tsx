@@ -1,0 +1,6 @@
+import { useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ClientForm } from '@/components/client-form'; import { ScreenHeader } from '@/components/screen-header'; import { useClients } from '@/providers/clients-provider'; import { useAppTheme } from '@/providers/theme-provider'; import type { ThemeColors } from '@/theme';
+export default function NewClientScreen() { const router=useRouter(); const {createClient}=useClients(); const {colors}=useAppTheme(); const styles=makeStyles(colors); return <SafeAreaView style={styles.screen}><View style={styles.wrap}><ScreenHeader title="Novo cliente" subtitle="Cria uma ficha centralizada" /><ScrollView contentContainerStyle={styles.content}><ClientForm submitLabel="Criar cliente" onSubmit={(value)=>{const id=createClient(value); router.replace({pathname:'/clients/[id]',params:{id}});}} /></ScrollView></View></SafeAreaView>; }
+const makeStyles=(colors:ThemeColors)=>StyleSheet.create({screen:{flex:1,backgroundColor:colors.background},wrap:{flex:1,width:'100%',maxWidth:760,alignSelf:'center',paddingHorizontal:20},content:{paddingBottom:45}});
