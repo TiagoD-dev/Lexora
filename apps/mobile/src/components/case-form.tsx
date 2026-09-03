@@ -5,6 +5,7 @@ import { AppInput } from '@/components/app-input';
 import { SelectField } from '@/components/select-field';
 import { LEGAL_AREAS } from '@/constants/legal-areas';
 import { useClients } from '@/providers/clients-provider';
+import { useSettings } from '@/providers/settings-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import type { CasePriority, CaseStatus, LegalCase } from '@/types/case';
@@ -18,8 +19,9 @@ const priorities: CasePriority[] = ['Baixa', 'Normal', 'Alta', 'Urgente'];
 export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial<CaseFormValue>; submitLabel: string; onSubmit: (value: CaseFormValue) => void }) {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
   const { clients } = useClients();
+  const { settings } = useSettings();
   const availableClients = clients.filter((client) => client.status === 'Ativo' || client.id === initial?.clientId);
-  const [value, setValue] = useState<CaseFormValue>({ title: '', client: '', clientId: undefined, area: 'Direito do Trabalho', court: '', processNumber: '', responsible: 'Tiago', priority: 'Normal', description: '', status: 'Rascunho', ...initial });
+  const [value, setValue] = useState<CaseFormValue>({ title: '', client: '', clientId: undefined, area: 'Direito do Trabalho', court: '', processNumber: '', responsible: settings.displayName.trim(), priority: 'Normal', description: '', status: 'Rascunho', ...initial });
   const set = <K extends keyof CaseFormValue>(key: K, next: CaseFormValue[K]) => setValue((current) => ({ ...current, [key]: next }));
   const valid = value.title.trim() && value.client.trim() && value.description.trim();
   const icon = hashTheme(colors, value.area || 'novo-caso');
