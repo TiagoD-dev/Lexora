@@ -23,11 +23,23 @@ class UserOut(BaseModel):
     displayName: str
     professionalTitle: str
     role: str
+    plan: str
+
+
+class UserUpdate(BaseModel):
+    displayName: str | None = None
+    professionalTitle: str | None = None
 
 
 class AuthResponse(BaseModel):
     accessToken: str
     user: UserOut
+
+
+class DelayNotification(BaseModel):
+    taskTitle: str
+    caseTitle: str
+    daysLate: int = Field(ge=0)
 
 
 class ClientPayload(BaseModel):
@@ -83,6 +95,26 @@ class CasePayload(BaseModel):
     facts: list[dict[str, Any]] = Field(default_factory=list)
     legalIssues: list[dict[str, Any]] = Field(default_factory=list)
     missingFacts: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class LegalUpdateOut(BaseModel):
+    id: str
+    source: str
+    sourceKind: str
+    title: str
+    summary: str
+    publishedAt: str | None = None
+    url: str
+    official: bool
+    areas: list[str] = Field(default_factory=list)
+
+
+class AssistantRequest(BaseModel):
+    prompt: str = Field(min_length=1)
+
+
+class AssistantResponse(BaseModel):
+    reply: str
 
 
 class CaseUpdate(BaseModel):

@@ -16,11 +16,11 @@ const suggestions = ['Resume os factos deste Caso', 'Que informação está em f
 export default function CaseAssistantScreen() {
   const { caseId, threadId } = useLocalSearchParams<{ caseId: string; threadId?: string }>();
   const router = useRouter(); const { width } = useWindowDimensions(); const { getCase } = useCases(); const { threads, createThread, sendMessage } = useAssistant();
-  const { colors } = useAppTheme(); const styles = makeStyles(colors); const [prompt, setPrompt] = useState('');
+  const { colors } = useAppTheme(); const styles = makeStyles(colors); const [prompt, setPrompt] = useState(''); const [sending, setSending] = useState(false);
   const item = getCase(caseId); const thread = threads.find((entry) => entry.id === threadId && entry.caseId === caseId);
   if (!item) return <SafeAreaView style={styles.screen}><ScreenHeader title="Caso não encontrado" /><Text style={styles.empty}>O contexto deste Caso já não está disponível.</Text></SafeAreaView>;
   const newConversation = () => { const id = createThread(caseId); router.replace({ pathname: '/assistant/[caseId]' as never, params: { caseId, threadId: id } } as never); };
-  const submit = (value = prompt) => { if (!thread || !value.trim()) return; sendMessage(thread.id, value.trim(), item); setPrompt(''); };
+  const submit = async (value = prompt) => { if (!thread || !value.trim() || sending) return; setPrompt(''); setSending(true); try { await sendMessage(thread.id, value.trim(), item); } finally { setSending(false); } };
   return <SafeAreaView style={styles.screen}><View style={styles.wrap}>
     <ScreenHeader title="Assistente do Caso" subtitle={`${item.reference} · ${item.title}`} actionLabel="Nova" onActionPress={newConversation} />
     <View style={[styles.workspace, width < 820 && styles.workspaceCompact]}>
@@ -36,7 +36,7 @@ export default function CaseAssistantScreen() {
         <ScrollView contentContainerStyle={styles.messages} showsVerticalScrollIndicator={false}>
           {thread.messages.length === 0 ? <View style={styles.welcome}><View style={styles.lexoraMark}><Text style={styles.lexoraMarkText}>✦</Text></View><Text style={styles.welcomeTitle}>Como posso ajudar neste Caso?</Text><Text style={styles.welcomeText}>Nesta conversa só utilizo o contexto de {item.reference}. Escolhe uma sugestão ou escreve uma pergunta.</Text><View style={styles.suggestions}>{suggestions.map((suggestion) => <Pressable key={suggestion} onPress={() => submit(suggestion)} style={styles.suggestion}><Text style={styles.suggestionText}>{suggestion}</Text><Text style={styles.suggestionArrow}>›</Text></Pressable>)}</View></View> : thread.messages.map((message) => <View key={message.id} style={[styles.message, message.role === 'user' ? styles.userMessage : styles.assistantMessage]}><Text style={styles.messageRole}>{message.role === 'user' ? 'TU' : 'LEXORA · CONTEXTO DO CASO'}</Text><Text style={[styles.messageText, message.role === 'user' && styles.userMessageText]}>{message.content}</Text></View>)}
         </ScrollView>
-        <View style={styles.composer}><AppInput multiline maxLength={1200} onChangeText={setPrompt} placeholder={`Perguntar sobre ${item.reference}…`} value={prompt} /><View style={styles.composerFooter}><Text style={styles.private}>Contexto restrito a este Caso</Text><Pressable disabled={!prompt.trim()} onPress={() => submit()} style={[styles.send, !prompt.trim() && styles.sendDisabled]}><Text style={styles.sendText}>Enviar ↑</Text></Pressable></View></View>
+        <View style={styles.composer}><AppInput multiline maxLength={1200} onChangeText={setPrompt} placeholder={`Perguntar sobre ${item.reference}…`} value={prompt} /><View style={styles.composerFooter}><Text style={styles.private}>Contexto restrito a este Caso</Text><Pressable disabled={!prompt.trim() || sending} onPress={() => submit()} style={[styles.send, (!prompt.trim() || sending) && styles.sendDisabled]}><Text style={styles.sendText}>{sending ? 'A responder…' : 'Enviar ↑'}</Text></Pressable></View></View>
       </>}</View>
     </View>
   </View></SafeAreaView>;

@@ -63,7 +63,7 @@ export default function ClientsScreen() {
         {!hydrated ? (
           <View style={styles.skeletons}>{[1, 2, 3].map((n) => <View key={n} style={styles.skeleton} />)}</View>
         ) : visible.length ? (
-          <View style={styles.grid}>
+          <View style={styles.list}>
             {visible.map((client, index) => (
               <ClientCard
                 key={client.id}
@@ -105,7 +105,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   filterActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   filterText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
   filterTextActive: { color: colors.background },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 22 },
+  list: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 22 },
   skeletons: { gap: 12, marginTop: 22 },
-  skeleton: { height: 150, borderRadius: radius.xl, backgroundColor: colors.surfaceMuted },
+  skeleton: { height: 96, borderRadius: radius.xl, backgroundColor: colors.surfaceMuted },
 });

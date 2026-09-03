@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { fetchCurrentUser, updateProfile } from '@/services/auth-service';
+
 export type AppSettings = {
   displayName: string; email: string; language: 'Português';
   professionalTitle: string; organization: string; phone: string;
@@ -16,5 +18,5 @@ const defaults: AppSettings = {
 };
 type SettingsContextValue = { settings: AppSettings; hydrated: boolean; updateSettings: (patch: Partial<AppSettings>) => void };
 const SettingsContext = createContext<SettingsContextValue | null>(null); const STORAGE_KEY='@lexora/settings/v1';
-export function SettingsProvider({children}:{children:ReactNode}){const [settings,setSettings]=useState(defaults);const [hydrated,setHydrated]=useState(false);useEffect(()=>{AsyncStorage.getItem(STORAGE_KEY).then((raw)=>{if(raw)setSettings({...defaults,...JSON.parse(raw)});}).catch(()=>undefined).finally(()=>setHydrated(true))},[]);const updateSettings=(patch:Partial<AppSettings>)=>setSettings((current)=>{const next={...current,...patch};AsyncStorage.setItem(STORAGE_KEY,JSON.stringify(next)).catch(()=>undefined);return next});const value=useMemo(()=>({settings,hydrated,updateSettings}),[settings,hydrated]);return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>}
+export function SettingsProvider({children}:{children:ReactNode}){const [settings,setSettings]=useState(defaults);const [hydrated,setHydrated]=useState(false);useEffect(()=>{AsyncStorage.getItem(STORAGE_KEY).then((raw)=>{if(raw)setSettings({...defaults,...JSON.parse(raw)});}).catch(()=>undefined).finally(()=>setHydrated(true));fetchCurrentUser().then((user)=>setSettings((current)=>({...current,displayName:user.displayName,professionalTitle:user.professionalTitle}))).catch(()=>undefined)},[]);const updateSettings=(patch:Partial<AppSettings>)=>{setSettings((current)=>{const next={...current,...patch};AsyncStorage.setItem(STORAGE_KEY,JSON.stringify(next)).catch(()=>undefined);return next});if(patch.displayName!==undefined||patch.professionalTitle!==undefined){const profilePatch:{displayName?:string;professionalTitle?:string}={};if(patch.displayName!==undefined)profilePatch.displayName=patch.displayName;if(patch.professionalTitle!==undefined)profilePatch.professionalTitle=patch.professionalTitle;updateProfile(profilePatch).catch(()=>undefined)}};const value=useMemo(()=>({settings,hydrated,updateSettings}),[settings,hydrated]);return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>}
 export function useSettings(){const value=useContext(SettingsContext);if(!value)throw new Error('useSettings deve ser usado dentro de SettingsProvider');return value}

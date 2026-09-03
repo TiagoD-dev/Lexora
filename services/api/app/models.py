@@ -13,6 +13,7 @@ class User(Base):
     displayName: Mapped[str] = mapped_column(String(255), default="")
     professionalTitle: Mapped[str] = mapped_column(String(255), default="")
     role: Mapped[str] = mapped_column(String(20), default="user")
+    plan: Mapped[str] = mapped_column(String(20), default="local")
     createdAt: Mapped[str] = mapped_column(String(40))
 
 

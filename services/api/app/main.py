@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from . import models
 from .db import Base, engine
-from .routers import auth, cases, clients
+from .routers import auth, cases, clients, legal_updates, notifications
 from .security import get_current_user
 
 Base.metadata.create_all(bind=engine)
@@ -19,6 +19,8 @@ with engine.begin() as connection:
     existing_columns = {row[1] for row in connection.execute(text("PRAGMA table_info(users)"))}
     if "role" not in existing_columns:
         connection.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'"))
+    if "plan" not in existing_columns:
+        connection.execute(text("ALTER TABLE users ADD COLUMN plan VARCHAR(20) DEFAULT 'local'"))
 
 app = FastAPI(
     title="Lexora API",
@@ -38,6 +40,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(clients.router)
 app.include_router(cases.router)
+app.include_router(legal_updates.router)
+app.include_router(notifications.router)
 
 
 @app.get("/health", tags=["system"])

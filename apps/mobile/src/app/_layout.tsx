@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { CasesProvider } from '@/providers/cases-provider';
 import { ClientsProvider } from '@/providers/clients-provider';
+import { LegalUpdatesProvider } from '@/providers/legal-updates-provider';
 import { ThemeProvider, useAppTheme } from '@/providers/theme-provider';
 import { SettingsProvider } from '@/providers/settings-provider';
 import { AssistantProvider } from '@/providers/assistant-provider';
@@ -11,7 +12,7 @@ import { AuthProvider, useAuth } from '@/providers/auth-provider';
 const PUBLIC_ROUTES = new Set(['login', 'register', 'plans']);
 
 export default function RootLayout() {
-  return <ThemeProvider><SettingsProvider><AuthProvider><ClientsProvider><CasesProvider><AssistantProvider><Navigation /></AssistantProvider></CasesProvider></ClientsProvider></AuthProvider></SettingsProvider></ThemeProvider>;
+  return <ThemeProvider><SettingsProvider><AuthProvider><ClientsProvider><CasesProvider><LegalUpdatesProvider><AssistantProvider><Navigation /></AssistantProvider></LegalUpdatesProvider></CasesProvider></ClientsProvider></AuthProvider></SettingsProvider></ThemeProvider>;
 }
 
 function Navigation() {

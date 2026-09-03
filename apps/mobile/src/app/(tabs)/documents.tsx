@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DocumentCard } from '@/components/document-card';
@@ -14,6 +14,7 @@ import { confirmDestructive } from '@/utils/confirm-action';
 
 export default function DocumentsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ caseId?: string }>();
   const { cases, addDocument, deleteDocument } = useCases();
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
@@ -21,7 +22,10 @@ export default function DocumentsScreen() {
   const [caseId, setCaseId] = useState(activeCases[0]?.id ?? '');
   const caseOptions = activeCases.map((item) => `${item.reference} — ${item.title}`);
   const selectedCase = activeCases.find((item) => item.id === caseId) ?? activeCases[0];
-  const documents = useMemo(() => cases.flatMap((item) => item.documents.map((document) => ({ ...document, caseId: item.id, caseTitle: item.title, reference: item.reference }))).sort((a, b) => b.addedAt.localeCompare(a.addedAt)), [cases]);
+  const [filterCaseId, setFilterCaseId] = useState(params.caseId ?? '');
+  const filterOptions = ['Todos os Casos', ...cases.map((item) => `${item.reference} — ${item.title}`)];
+  const filterLabel = filterCaseId ? filterOptions[cases.findIndex((item) => item.id === filterCaseId) + 1] ?? 'Todos os Casos' : 'Todos os Casos';
+  const documents = useMemo(() => cases.flatMap((item) => item.documents.map((document) => ({ ...document, caseId: item.id, caseTitle: item.title, reference: item.reference }))).filter((document) => !filterCaseId || document.caseId === filterCaseId).sort((a, b) => b.addedAt.localeCompare(a.addedAt)), [cases, filterCaseId]);
   const toReview = documents.filter((document) => document.extractionStatus === 'Por rever').length;
   const reviewed = documents.filter((document) => document.extractionStatus === 'Revisto').length;
 
@@ -52,10 +56,12 @@ export default function DocumentsScreen() {
           ) : <Text style={styles.muted}>Cria primeiro um Caso para poderes associar documentos.</Text>}
         </View>
 
-        <View style={styles.listHeading}><Text style={styles.sectionTitle}>Todos os documentos</Text><View style={styles.count}><Text style={styles.countText}>{documents.length}</Text></View></View>
+        <SelectField label="Filtrar por Caso" value={filterLabel} options={filterOptions} onChange={(label) => setFilterCaseId(label === 'Todos os Casos' ? '' : cases[filterOptions.indexOf(label) - 1]?.id ?? '')} />
+
+        <View style={styles.listHeading}><Text style={styles.sectionTitle}>{filterCaseId ? 'Documentos do Caso' : 'Todos os documentos'}</Text><View style={styles.count}><Text style={styles.countText}>{documents.length}</Text></View></View>
 
         {documents.length === 0 ? (
-          <EmptyState symbol="▤" title="Ainda não existem documentos" description="Carrega o primeiro ficheiro para começares a extrair factos e entidades." />
+          <EmptyState symbol="▤" title={filterCaseId ? 'Este Caso ainda não tem documentos' : 'Ainda não existem documentos'} description="Carrega o primeiro ficheiro para começares a extrair factos e entidades." />
         ) : (
           <View style={styles.grid}>
             {documents.map((document, index) => (

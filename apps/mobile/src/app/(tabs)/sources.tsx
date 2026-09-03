@@ -1,20 +1,30 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppInput } from '@/components/app-input';
+import { useLegalUpdates } from '@/providers/legal-updates-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import { hashTheme } from '@/utils/palette';
+import type { LegalUpdate } from '@/types/legal-update';
 
-const sources = [
-  { type: 'LEGISLAÇÃO', title: 'Código do Trabalho', detail: 'Lei n.º 7/2009 · versão a confirmar' },
-  { type: 'JURISPRUDÊNCIA', title: 'Decisões relacionadas com cessação', detail: 'Fontes demonstrativas do caso atual' },
-];
+const typeOf = (update: LegalUpdate) => (update.sourceKind === 'Jurisprudência' ? 'JURISPRUDÊNCIA' : 'LEGISLAÇÃO');
 
 export default function SourcesScreen() {
+  const { updates, hydrated, error, refresh } = useLegalUpdates();
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
-  const legislacao = sources.filter((source) => source.type === 'LEGISLAÇÃO').length;
-  const jurisprudencia = sources.filter((source) => source.type === 'JURISPRUDÊNCIA').length;
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return updates;
+    return updates.filter((u) => u.title.toLowerCase().includes(q) || u.summary.toLowerCase().includes(q));
+  }, [updates, query]);
+
+  const legislacao = updates.filter((u) => typeOf(u) === 'LEGISLAÇÃO').length;
+  const jurisprudencia = updates.filter((u) => typeOf(u) === 'JURISPRUDÊNCIA').length;
+
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -24,34 +34,56 @@ export default function SourcesScreen() {
           <Text style={styles.pageSubtitle}>Legislação e jurisprudência utilizadas nas análises.</Text>
         </View>
         <View style={styles.hero}>
-          <HeroStat value={sources.length} label="Total" styles={styles} />
+          <HeroStat value={updates.length} label="Total" styles={styles} />
           <View style={styles.heroDivider} />
           <HeroStat value={legislacao} label="Legislação" styles={styles} />
           <View style={styles.heroDivider} />
           <HeroStat value={jurisprudencia} label="Jurisprudência" styles={styles} />
         </View>
-        <AppInput accessibilityLabel="Pesquisar fontes" placeholder="Pesquisar legislação ou jurisprudência..." />
+        <AppInput
+          accessibilityLabel="Pesquisar fontes"
+          placeholder="Pesquisar legislação ou jurisprudência..."
+          value={query}
+          onChangeText={setQuery}
+        />
         <View style={styles.info}>
           <Text style={styles.infoTitle}>Fontes verificadas</Text>
           <Text style={styles.infoText}>Cada referência indicará a redação temporal e a passagem que suporta a resposta.</Text>
         </View>
         <Text style={styles.sectionTitle}>Consultadas recentemente</Text>
-        <View style={styles.list}>
-          {sources.map((source) => {
-            const icon = hashTheme(colors, source.type);
-            return (
-              <Pressable key={source.title} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-                <View style={[styles.icon, { backgroundColor: icon.bg }]}><Text style={[styles.iconText, { color: icon.fg }]}>§</Text></View>
-                <View style={styles.copy}>
-                  <Text style={styles.type}>{source.type}</Text>
-                  <Text style={styles.title}>{source.title}</Text>
-                  <Text style={styles.detail}>{source.detail}</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {!hydrated ? (
+          <View style={styles.state}><ActivityIndicator color={colors.primary} /><Text style={styles.stateText}>A consultar fontes oficiais…</Text></View>
+        ) : error ? (
+          <View style={styles.state}>
+            <Text style={styles.stateText}>Não foi possível obter as fontes agora.</Text>
+            <Pressable onPress={refresh}><Text style={styles.stateRetry}>Tentar novamente</Text></Pressable>
+          </View>
+        ) : filtered.length === 0 ? (
+          <View style={styles.state}><Text style={styles.stateText}>Sem fontes disponíveis de momento.</Text></View>
+        ) : (
+          <View style={styles.list}>
+            {filtered.map((source) => {
+              const type = typeOf(source);
+              const icon = hashTheme(colors, type);
+              return (
+                <Pressable
+                  key={source.id}
+                  accessibilityRole="link"
+                  onPress={() => Linking.openURL(source.url)}
+                  style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+                >
+                  <View style={[styles.icon, { backgroundColor: icon.bg }]}><Text style={[styles.iconText, { color: icon.fg }]}>§</Text></View>
+                  <View style={styles.copy}>
+                    <Text style={styles.type}>{type}</Text>
+                    <Text style={styles.title}>{source.title}</Text>
+                    <Text numberOfLines={2} style={styles.detail}>{source.summary}</Text>
+                  </View>
+                  <Text style={styles.chevron}>›</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -77,6 +109,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   infoTitle: { color: colors.primary, fontSize: 13, fontWeight: '700' },
   infoText: { marginTop: 5, color: colors.textMuted, fontSize: 12, lineHeight: 18 },
   sectionTitle: { marginTop: 10, marginBottom: -4, color: colors.text, fontSize: 18, fontWeight: '700' },
+  state: { alignItems: 'center', gap: 10, paddingVertical: 40 },
+  stateText: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
+  stateRetry: { color: colors.primary, fontSize: 12, fontWeight: '800' },
   list: { gap: 12 },
   card: { minHeight: 92, flexDirection: 'row', alignItems: 'center', padding: 14, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, backgroundColor: colors.surface },
   pressed: { opacity: 0.7 },

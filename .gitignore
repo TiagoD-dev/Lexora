@@ -17,6 +17,8 @@ uploads/
 # Tool caches
 .npm-cache/
 work/
+.claude/
+graphify-out/
 
 # Editors and operating systems
 .vscode/

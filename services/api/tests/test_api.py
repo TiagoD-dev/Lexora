@@ -66,6 +66,29 @@ def test_registration_login_and_duplicate_email(client):
     assert login.json()["accessToken"]
 
 
+def test_update_profile_requires_auth_and_updates_only_provided_fields(client):
+    assert client.patch("/auth/me", json={"displayName": "Intrusão"}).status_code == 401
+
+    token = register(client, "profile@example.com", "Ana")
+    original_email = client.get("/auth/me", headers=auth(token)).json()["email"]
+
+    updated = client.patch("/auth/me", json={"displayName": "Ana Nova"}, headers=auth(token))
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["displayName"] == "Ana Nova"
+    assert body["email"] == original_email
+    assert body["professionalTitle"] == ""
+
+    again = client.patch(
+        "/auth/me",
+        json={"professionalTitle": "Advogada"},
+        headers=auth(token),
+    )
+    assert again.status_code == 200
+    assert again.json()["displayName"] == "Ana Nova"
+    assert again.json()["professionalTitle"] == "Advogada"
+
+
 def test_clients_and_cases_are_isolated_between_users(client):
     owner_token = register(client, "owner@example.com")
     other_token = register(client, "other@example.com")
@@ -110,6 +133,23 @@ def test_tasks_and_documents_are_persisted_in_case(client):
     assert stored["documents"] == [document]
 
 
+def test_case_assistant_requires_auth_ownership_and_replies(client, monkeypatch):
+    from app.routers import cases as cases_router
+
+    monkeypatch.setattr(cases_router, "_generate_assistant_reply", lambda prompt, case: f"Resposta simulada para: {prompt}")
+
+    owner_token = register(client, "assistant-owner@example.com")
+    other_token = register(client, "assistant-other@example.com")
+    assert client.post("/cases", json=case_payload(), headers=auth(owner_token)).status_code == 201
+
+    assert client.post("/cases/case-1/assistant", json={"prompt": "Resume os factos"}).status_code == 401
+    assert client.post("/cases/case-1/assistant", json={"prompt": "Resume os factos"}, headers=auth(other_token)).status_code == 404
+
+    response = client.post("/cases/case-1/assistant", json={"prompt": "Resume os factos"}, headers=auth(owner_token))
+    assert response.status_code == 200, response.text
+    assert response.json()["reply"] == "Resposta simulada para: Resume os factos"
+
+
 def test_authenticated_text_extraction(client):
     token = register(client, "documents@example.com")
     response = client.post(
@@ -122,3 +162,7 @@ def test_authenticated_text_extraction(client):
     assert "Maria Silva" in payload["text"]
     assert payload["characterCount"] > 0
     assert any(item["type"] == "Data" for item in payload["suggestions"])
+
+
+def test_legal_updates_requires_authentication(client):
+    assert client.get("/legal-updates").status_code == 401

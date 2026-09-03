@@ -1,0 +1,1 @@
+export type LegalUpdate = { id: string; source: string; sourceKind: 'Portugal' | 'União Europeia' | 'Jurisprudência'; title: string; summary: string; publishedAt: string | null; url: string; official: boolean; areas: string[] };
