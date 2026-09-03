@@ -71,6 +71,10 @@ export function TopNavigationActions() {
 
   return (
     <View style={styles.actions}>
+      <Pressable accessibilityLabel="Pesquisar casos e clientes" accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+        <Text style={styles.icon}>⌕</Text>
+      </Pressable>
+
       <Pressable accessibilityLabel={`${notificationCount} notificações de prazos`} accessibilityRole="button" onPress={() => setNotifOpen(true)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
         <Text style={styles.icon}>◉</Text>
         {notificationCount ? <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>{notificationCount > 9 ? '9+' : notificationCount}</Text></View> : null}
