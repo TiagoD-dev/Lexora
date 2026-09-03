@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ApiError } from '@/services/api-client';
+import { createCheckoutSession, type PlanId } from '@/services/billing-service';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import { hashTheme } from '@/utils/palette';
@@ -42,10 +44,18 @@ export function PlansContent() {
   const styles = makeStyles(colors);
   const [cycle, setCycle] = useState<BillingCycle>('annual');
 
-  const requestPlan = (name: string) => Alert.alert(
-    `Plano ${name}`,
-    'A faturação segura será ligada quando a conta online e o armazenamento cifrado estiverem disponíveis. Por agora, registámos este ponto como o próximo passo comercial.',
-  );
+  const requestPlan = async (planId: PlanId, name: string) => {
+    try {
+      const { url } = await createCheckoutSession(planId, cycle);
+      await Linking.openURL(url);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 501) {
+        Alert.alert(`Plano ${name}`, 'A faturação Stripe ainda não está configurada nesta instância (falta a conta e as chaves).');
+        return;
+      }
+      Alert.alert(`Plano ${name}`, 'Não foi possível iniciar o checkout. Tenta novamente.');
+    }
+  };
 
   return (
     <>
@@ -75,7 +85,12 @@ export function PlansContent() {
               {price > 0 ? <Text style={styles.period}>/mês{cycle === 'annual' ? ' · faturado anualmente' : ''}</Text> : null}
             </View>
             <View style={styles.features}>{plan.features.map((feature) => <View key={feature} style={styles.feature}><Text style={styles.check}>✓</Text><Text style={styles.featureText}>{feature}</Text></View>)}</View>
-            <Pressable accessibilityRole="button" onPress={() => requestPlan(plan.name)} style={({ pressed }) => [styles.cta, plan.featured && styles.ctaFeatured, pressed && styles.pressed]}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={plan.id === 'local'}
+              onPress={() => requestPlan(plan.id as PlanId, plan.name)}
+              style={({ pressed }) => [styles.cta, plan.featured && styles.ctaFeatured, pressed && styles.pressed]}
+            >
               <Text style={[styles.ctaText, plan.featured && styles.ctaTextFeatured]}>{plan.id === 'local' ? 'Plano atual' : plan.id === 'pro' ? 'Escolher Pro' : 'Falar connosco'}</Text>
             </Pressable>
           </View>;

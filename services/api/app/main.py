@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from . import models
 from .db import Base, engine
-from .routers import auth, cases, clients, legal_updates, notifications
+from .routers import auth, billing, cases, clients, legal_updates, notifications
 from .security import get_current_user
 
 Base.metadata.create_all(bind=engine)
@@ -38,6 +38,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(billing.router)
 app.include_router(clients.router)
 app.include_router(cases.router)
 app.include_router(legal_updates.router)

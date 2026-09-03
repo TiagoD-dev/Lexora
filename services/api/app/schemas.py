@@ -36,6 +36,15 @@ class AuthResponse(BaseModel):
     user: UserOut
 
 
+class CheckoutRequest(BaseModel):
+    plan: str = Field(pattern="^(pro|office)$")
+    cycle: str = Field(pattern="^(monthly|annual)$")
+
+
+class CheckoutResponse(BaseModel):
+    url: str
+
+
 class DelayNotification(BaseModel):
     taskTitle: str
     caseTitle: str
