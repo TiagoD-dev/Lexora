@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from google import genai
@@ -9,9 +11,17 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..db import get_db
+from ..email import send_email
 from ..security import get_current_user
+from . import notifications
 
 router = APIRouter(prefix="/cases", tags=["cases"])
+logger = logging.getLogger(__name__)
+
+_STATUS_NOTICE = {
+    "Em análise": "O seu processo encontra-se agora em análise pela nossa equipa.",
+    "Concluído": "O seu processo foi concluído.",
+}
 
 ASSISTANT_DISCLAIMER = (
     "Esta resposta organiza os dados do Caso; não substitui a validação das fontes "
@@ -71,12 +81,68 @@ def create_case(payload: schemas.CasePayload, db: Session = Depends(get_db), cur
     return case
 
 
+def _notify_client_status(db: Session, case: models.Case) -> None:
+    notice = _STATUS_NOTICE.get(case.status)
+    if not notice or not case.clientId:
+        return
+    client = db.get(models.Client, case.clientId)
+    if client is None or not client.email:
+        return
+    subject = f"[LEXORA] Atualização do processo — {case.title}"
+    body = (
+        f"Exmo(a). {client.name},\n\n{notice}\n\n"
+        f"Processo: {case.title} ({case.reference})\n\n"
+        f"Com os melhores cumprimentos,\nEquipa LEXORA\n"
+    )
+    logo_html = (
+        f'<img src="cid:{notifications._LOGO_CID}" alt="LEXORA" height="36" style="display:block;">'
+        if notifications._logo_bytes
+        else '<span style="color:#FFFFFF;font-size:22px;font-weight:700;letter-spacing:2px;">LEXORA</span>'
+    )
+    html_body = f"""\
+<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:{notifications._BRAND_BACKGROUND};font-family:Georgia,'Times New Roman',serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{notifications._BRAND_BACKGROUND};padding:32px 0;">
+<tr><td align="center">
+<table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:16px;overflow:hidden;">
+<tr><td style="background:{notifications._BRAND_PRIMARY};padding:28px 32px;">
+  {logo_html}
+  <span style="color:{notifications._BRAND_ACCENT};font-size:11px;display:block;letter-spacing:1px;margin-top:6px;">ASSISTENTE JURÍDICO DIGITAL</span>
+</td></tr>
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 18px;color:#17231D;font-size:14px;">Exmo(a). {escape(client.name)},</p>
+  <p style="margin:0 0 20px;color:#17231D;font-size:14px;">{escape(notice)}</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{notifications._BRAND_BACKGROUND};border-radius:8px;">
+    <tr><td style="padding:16px 20px;">
+      <p style="margin:0 0 6px;color:#687169;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Processo</p>
+      <p style="margin:0;color:#17231D;font-size:15px;font-weight:700;">{escape(case.title)} ({escape(case.reference)})</p>
+    </td></tr>
+  </table>
+  <p style="margin:26px 0 0;color:#17231D;font-size:14px;">Com os melhores cumprimentos,<br/><strong>Equipa LEXORA</strong></p>
+</td></tr>
+<tr><td style="padding:16px 32px;background:{notifications._BRAND_BACKGROUND};text-align:center;">
+  <span style="color:#7B847E;font-size:10px;">Este é um email automático do assistente jurídico digital LEXORA.</span>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+    inline_image = (notifications._logo_bytes, notifications._LOGO_CID) if notifications._logo_bytes else None
+    try:
+        send_email(client.email, subject, body, html_body, inline_image)
+    except Exception:
+        logger.exception("Falha ao enviar email de atualização de estado ao cliente %s", client.id)
+
+
 @router.patch("/{case_id}", response_model=schemas.CasePayload)
 def update_case(case_id: str, payload: schemas.CaseUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     case = _get_owned(db, current_user, case_id)
+    previous_status = case.status
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(case, field, value)
     db.commit()
+    if case.status != previous_status:
+        _notify_client_status(db, case)
     return case
 
 
