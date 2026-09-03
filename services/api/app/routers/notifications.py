@@ -81,3 +81,15 @@ def send_delay_email(
         send_email(current_user.email, subject, body, html_body, inline_image)
     except Exception as error:
         raise HTTPException(502, f"Não foi possível enviar o email: {error}") from error
+
+
+@router.post("/client-email", status_code=204)
+def send_client_email(
+    payload: schemas.ClientEmailRequest,
+    current_user: models.User = Depends(get_current_user),
+) -> None:
+    """Envia um email ao cliente a partir de um template escolhido e editado na app."""
+    try:
+        send_email(payload.to, payload.subject, payload.body)
+    except Exception as error:
+        raise HTTPException(502, f"Não foi possível enviar o email: {error}") from error
