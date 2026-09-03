@@ -51,6 +51,12 @@ class DelayNotification(BaseModel):
     daysLate: int = Field(ge=0)
 
 
+class ClientEmailRequest(BaseModel):
+    to: EmailStr
+    subject: str = Field(min_length=1)
+    body: str = Field(min_length=1)
+
+
 class ClientPayload(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
