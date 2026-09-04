@@ -24,6 +24,7 @@ type CasesContextValue = {
 const CasesContext = createContext<CasesContextValue | null>(null);
 const STORAGE_KEY = '@lexora/cases-cache/v1';
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const trunc = (text: string, max = 60) => (text.length > max ? `${text.slice(0, max)}…` : text);
 const safeDate = (value: unknown, fallback: string) =>
   typeof value === 'string' && !Number.isNaN(new Date(value).getTime()) ? value : fallback;
 
@@ -114,7 +115,7 @@ export function CasesProvider({ children }: { children: ReactNode }) {
     syncCase(item, next);
     return next;
   }));
-  const addNote = (id: string, text: string) => mutate(id, (item) => touch({ ...item, notes: [{ id: uid(), text, createdAt: new Date().toISOString() } as CaseNote, ...item.notes] }));
+  const addNote = (id: string, text: string) => mutate(id, (item) => touch({ ...item, notes: [{ id: uid(), text, createdAt: new Date().toISOString() } as CaseNote, ...item.notes], timeline: [{ id: uid(), title: `Nota adicionada: ${trunc(text)}`, date: new Date().toISOString() }, ...item.timeline] }));
   const addTask = (id: string, task: { title: string; description?: string; dueDate?: string; priority?: TaskPriority; deadlineKind?: DeadlineKind; recurrence?: RecurrenceRule; reminderDays?: number[] }) => mutate(id, (item) => touch({ ...item, tasks: [{ id: uid(), ...task, priority: task.priority ?? 'Normal', deadlineKind: task.deadlineKind ?? 'Interno', recurrence: task.recurrence ?? 'Nenhuma', reminderDays: task.reminderDays ?? [], completed: false, createdAt: new Date().toISOString() }, ...item.tasks], timeline: [{ id: uid(), title: `Tarefa criada: ${task.title}`, date: new Date().toISOString() }, ...item.timeline] }));
   const updateTask = (caseId: string, taskId: string, patch: Partial<Pick<CaseTask, 'title' | 'description' | 'dueDate' | 'priority'>>) => mutate(caseId, (item) => touch({ ...item, tasks: item.tasks.map((task) => task.id === taskId ? { ...task, ...patch } : task) }));
   const deleteTask = (caseId: string, taskId: string) => mutate(caseId, (item) => { const task = item.tasks.find((entry) => entry.id === taskId); return touch({ ...item, tasks: item.tasks.filter((entry) => entry.id !== taskId), timeline: [{ id: uid(), title: `Tarefa eliminada: ${task?.title ?? 'tarefa'}`, date: new Date().toISOString() }, ...item.timeline] }); });
@@ -125,17 +126,28 @@ export function CasesProvider({ children }: { children: ReactNode }) {
     const nextDate = completing && current.dueDate ? nextOccurrence(current.dueDate, current.recurrence) : undefined;
     const alreadyCreated = item.tasks.some((task) => task.recurrenceSourceId === current.id && task.dueDate === nextDate);
     const recurringTask: CaseTask[] = nextDate && !alreadyCreated ? [{ ...current, id: uid(), dueDate: nextDate, completed: false, createdAt: new Date().toISOString(), recurrenceSourceId: current.id }] : [];
-    return touch({ ...item, tasks: [...recurringTask, ...item.tasks.map((task) => task.id === taskId ? { ...task, completed: completing } : task)], timeline: recurringTask.length ? [{ id: uid(), title: `Próxima ocorrência criada: ${current.title}`, date: new Date().toISOString() }, ...item.timeline] : item.timeline });
+    const toggleEntry = { id: uid(), title: `${completing ? 'Tarefa concluída' : 'Tarefa reaberta'}: ${current.title}`, date: new Date().toISOString() };
+    const recurEntry = recurringTask.length ? [{ id: uid(), title: `Próxima ocorrência criada: ${current.title}`, date: new Date().toISOString() }] : [];
+    return touch({ ...item, tasks: [...recurringTask, ...item.tasks.map((task) => task.id === taskId ? { ...task, completed: completing } : task)], timeline: [...recurEntry, toggleEntry, ...item.timeline] });
   });
   const addDocument = (id: string, document: Omit<CaseDocument, 'id' | 'addedAt' | 'status'>) => mutate(id, (item) => touch({ ...item, documents: [{ id: uid(), ...document, status: 'Disponível', extractionStatus: document.extractionStatus ?? 'Por extrair', suggestions: document.suggestions ?? [], addedAt: new Date().toISOString() }, ...item.documents], timeline: [{ id: uid(), title: `Documento adicionado: ${document.name}`, date: new Date().toISOString() }, ...item.timeline] }));
   const updateDocument = (caseId: string, documentId: string, patch: Partial<Omit<CaseDocument, 'id' | 'addedAt'>>) => mutate(caseId, (item) => touch({ ...item, documents: item.documents.map((document) => document.id === documentId ? { ...document, ...patch } : document) }));
   const deleteDocument = (caseId: string, documentId: string) => mutate(caseId, (item) => { const document = item.documents.find((entry) => entry.id === documentId); return touch({ ...item, documents: item.documents.filter((entry) => entry.id !== documentId), timeline: [{ id: uid(), title: `Documento eliminado: ${document?.name ?? 'ficheiro'}`, date: new Date().toISOString() }, ...item.timeline] }); });
-  const addFact = (id: string, statement: string, source: Partial<Pick<CaseFact, 'source' | 'sourceDocumentId' | 'sourceDocumentName' | 'sourceSuggestionId' | 'sourceExcerpt' | 'sourceLocation' | 'reviewedAt' | 'relevantDate'>> = {}) => mutate(id, (item) => touch({ ...item, facts: [{ id: uid(), statement, status: 'Por confirmar', source: source.source ?? 'Utilizador', createdAt: new Date().toISOString(), ...source } as CaseFact, ...item.facts] }));
-  const updateFactStatus = (caseId: string, factId: string, status: FactStatus) => mutate(caseId, (item) => touch({ ...item, facts: item.facts.map((fact) => fact.id === factId ? { ...fact, status } : fact) }));
-  const addEntity = (id: string, name: string, role: string) => mutate(id, (item) => touch({ ...item, entities: [...item.entities, { id: uid(), name, role, type: 'Pessoa' } as CaseEntity] }));
-  const addLegalIssue = (id: string, title: string) => mutate(id, (item) => touch({ ...item, legalIssues: [...item.legalIssues, { id: uid(), title, status: 'Identificada' } as LegalIssue] }));
-  const addMissingFact = (id: string, question: string) => mutate(id, (item) => touch({ ...item, missingFacts: [...item.missingFacts, { id: uid(), question, resolved: false } as MissingFact] }));
-  const toggleMissingFact = (caseId: string, missingFactId: string) => mutate(caseId, (item) => touch({ ...item, missingFacts: item.missingFacts.map((fact) => fact.id === missingFactId ? { ...fact, resolved: !fact.resolved } : fact) }));
+  const addFact = (id: string, statement: string, source: Partial<Pick<CaseFact, 'source' | 'sourceDocumentId' | 'sourceDocumentName' | 'sourceSuggestionId' | 'sourceExcerpt' | 'sourceLocation' | 'reviewedAt' | 'relevantDate'>> = {}) => mutate(id, (item) => touch({ ...item, facts: [{ id: uid(), statement, status: 'Por confirmar', source: source.source ?? 'Utilizador', createdAt: new Date().toISOString(), ...source } as CaseFact, ...item.facts], timeline: [{ id: uid(), title: `Facto registado: ${trunc(statement)}`, date: new Date().toISOString() }, ...item.timeline] }));
+  const updateFactStatus = (caseId: string, factId: string, status: FactStatus) => mutate(caseId, (item) => {
+    const fact = item.facts.find((entry) => entry.id === factId);
+    if (!fact || fact.status === status) return item;
+    return touch({ ...item, facts: item.facts.map((entry) => entry.id === factId ? { ...entry, status } : entry), timeline: [{ id: uid(), title: `Facto ${status}: ${trunc(fact.statement)}`, date: new Date().toISOString() }, ...item.timeline] });
+  });
+  const addEntity = (id: string, name: string, role: string) => mutate(id, (item) => touch({ ...item, entities: [...item.entities, { id: uid(), name, role, type: 'Pessoa' } as CaseEntity], timeline: [{ id: uid(), title: `Entidade adicionada: ${name} (${role})`, date: new Date().toISOString() }, ...item.timeline] }));
+  const addLegalIssue = (id: string, title: string) => mutate(id, (item) => touch({ ...item, legalIssues: [...item.legalIssues, { id: uid(), title, status: 'Identificada' } as LegalIssue], timeline: [{ id: uid(), title: `Questão jurídica: ${title}`, date: new Date().toISOString() }, ...item.timeline] }));
+  const addMissingFact = (id: string, question: string) => mutate(id, (item) => touch({ ...item, missingFacts: [...item.missingFacts, { id: uid(), question, resolved: false } as MissingFact], timeline: [{ id: uid(), title: `Pergunta registada: ${question}`, date: new Date().toISOString() }, ...item.timeline] }));
+  const toggleMissingFact = (caseId: string, missingFactId: string) => mutate(caseId, (item) => {
+    const fact = item.missingFacts.find((entry) => entry.id === missingFactId);
+    if (!fact) return item;
+    const resolved = !fact.resolved;
+    return touch({ ...item, missingFacts: item.missingFacts.map((entry) => entry.id === missingFactId ? { ...entry, resolved } : entry), timeline: resolved ? [{ id: uid(), title: `Pergunta resolvida: ${fact.question}`, date: new Date().toISOString() }, ...item.timeline] : item.timeline });
+  });
   const value = { cases, hydrated, getCase: (id: string) => cases.find((item) => item.id === id), createCase, updateCase, archiveCase, deleteCase, syncClientName, addNote, addTask, updateTask, deleteTask, toggleTask, addDocument, updateDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact };
   return <CasesContext.Provider value={value}>{children}</CasesContext.Provider>;
 }
