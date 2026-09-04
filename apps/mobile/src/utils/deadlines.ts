@@ -12,6 +12,14 @@ export function parseLocalDate(value: string) {
   return toLocalDate(date) === value ? date : null;
 }
 
+/** Normaliza "DD/MM/AAAA" ou "DD-MM-AAAA" (formato devolvido pela extração) para "AAAA-MM-DD". Devolve null se não for uma data real. */
+export function normalizeExtractedDate(value: string) {
+  const match = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(value.trim());
+  if (!match) return null;
+  const iso = `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+  return parseLocalDate(iso) ? iso : null;
+}
+
 function easterSunday(year: number) {
   const a = year % 19; const b = Math.floor(year / 100); const c = year % 100;
   const d = Math.floor(b / 4); const e = b % 4; const f = Math.floor((b + 8) / 25);
@@ -63,4 +71,10 @@ export function nextOccurrence(value: string, recurrence: RecurrenceRule) {
     date.setDate(Math.min(day, new Date(date.getFullYear(), month + 1, 0).getDate()));
   }
   return toLocalDate(date);
+}
+
+if (__DEV__) {
+  console.assert(normalizeExtractedDate('15/03/2026') === '2026-03-15', 'normalizeExtractedDate: DD/MM/AAAA falhou');
+  console.assert(normalizeExtractedDate('31/02/2026') === null, 'normalizeExtractedDate: deveria rejeitar data inexistente');
+  console.assert(normalizeExtractedDate('não é data') === null, 'normalizeExtractedDate: deveria rejeitar texto livre');
 }

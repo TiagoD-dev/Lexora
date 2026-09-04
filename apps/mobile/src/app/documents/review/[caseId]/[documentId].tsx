@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '@/components/app-button';
@@ -8,16 +8,27 @@ import { ScreenHeader } from '@/components/screen-header';
 import { useCases } from '@/providers/cases-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
+import { normalizeExtractedDate } from '@/utils/deadlines';
 
 export default function DocumentReviewScreen() {
   const { caseId, documentId } = useLocalSearchParams<{ caseId: string; documentId: string }>(); const router = useRouter();
-  const { getCase, addFact, addEntity, addLegalIssue, updateDocument } = useCases(); const { colors } = useAppTheme(); const styles = makeStyles(colors);
+  const { getCase, addFact, addEntity, addLegalIssue, addTask, updateDocument } = useCases(); const { colors } = useAppTheme(); const styles = makeStyles(colors);
   const item = getCase(caseId); const document = item?.documents.find((entry) => entry.id === documentId); const suggestions = document?.suggestions ?? [];
   const [selected, setSelected] = useState<string[]>([]); const pending = suggestions.filter((suggestion) => !suggestion.accepted);
   if (!item || !document) return <SafeAreaView style={styles.screen}><ScreenHeader title="Documento não encontrado" /><Text style={styles.empty}>Este documento já não está disponível.</Text></SafeAreaView>;
   const toggle = (id: string) => setSelected((current) => current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]);
+  const finish = () => router.replace({ pathname: '/cases/[id]', params: { id: caseId } });
+  const offerTasks = (list: typeof suggestions) => {
+    if (!list.length) return finish();
+    const [suggestion, ...rest] = list; const dueDate = normalizeExtractedDate(suggestion.value)!;
+    Alert.alert('Data encontrada', `“${suggestion.value}” foi registada como facto. Criar também uma tarefa com este prazo?`, [
+      { text: 'Só registar', style: 'cancel', onPress: () => offerTasks(rest) },
+      { text: 'Criar tarefa', onPress: () => { addTask(caseId, { title: suggestion.detail ? `${suggestion.detail}: ${suggestion.value}` : `Prazo: ${suggestion.value}`, dueDate, deadlineKind: 'Judicial' }); offerTasks(rest); } },
+    ]);
+  };
   const apply = () => {
-    suggestions.filter((suggestion) => selected.includes(suggestion.id) && !suggestion.accepted).forEach((suggestion) => {
+    const chosen = suggestions.filter((suggestion) => selected.includes(suggestion.id) && !suggestion.accepted);
+    chosen.forEach((suggestion) => {
       if (suggestion.type === 'Entidade') addEntity(caseId, suggestion.value, `Extraído de ${document.name}`);
       else if (suggestion.type === 'Questão jurídica') addLegalIssue(caseId, suggestion.value);
       else addFact(caseId, suggestion.type === 'Data' ? `Data mencionada em ${document.name}: ${suggestion.value}` : suggestion.value, {
@@ -32,7 +43,7 @@ export default function DocumentReviewScreen() {
       });
     });
     updateDocument(caseId, documentId, { extractionStatus: 'Revisto', reviewedAt: new Date().toISOString(), suggestions: suggestions.map((suggestion) => selected.includes(suggestion.id) ? { ...suggestion, accepted: true } : suggestion) });
-    router.replace({ pathname: '/cases/[id]', params: { id: caseId } });
+    offerTasks(chosen.filter((suggestion) => suggestion.type === 'Data' && normalizeExtractedDate(suggestion.value)));
   };
   const finishWithoutAdding = () => { updateDocument(caseId, documentId, { extractionStatus: 'Revisto', reviewedAt: new Date().toISOString() }); router.replace({ pathname: '/cases/[id]', params: { id: caseId } }); };
   return <SafeAreaView style={styles.screen}><View style={styles.wrap}><ScreenHeader title="Rever extração" subtitle={`${item.reference} · ${document.name}`} /><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
