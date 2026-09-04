@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppInput } from '@/components/app-input';
 import { ClientCard } from '@/components/client-card';
 import { EmptyState } from '@/components/empty-state';
+import { OfflineBanner } from '@/components/offline-banner';
 import { useCases } from '@/providers/cases-provider';
 import { useClients } from '@/providers/clients-provider';
 import { useAppTheme } from '@/providers/theme-provider';
@@ -56,6 +57,7 @@ export default function ClientsScreen() {
           <HeroStat value={withCases} label="Com Casos" styles={styles} />
         </View>
 
+        <OfflineBanner />
         <AppInput accessibilityLabel="Pesquisar clientes" onChangeText={setQuery} placeholder="Pesquisar por nome, contacto ou NIF…" returnKeyType="search" value={query} />
 
         <View style={styles.filters}>{filters.map((item) => <Pressable key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.filterActive]}><Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text></Pressable>)}</View>

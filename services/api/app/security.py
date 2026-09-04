@@ -36,17 +36,21 @@ def create_access_token(user_id: str) -> str:
     return jwt.encode({"sub": user_id, "exp": expire}, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
-) -> models.User:
-    if credentials is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION_MESSAGE)
+def get_user_from_token(token: str, db: Session) -> models.User:
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.PyJWTError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION_MESSAGE)
     user = db.get(models.User, payload.get("sub"))
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION_MESSAGE)
     return user
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> models.User:
+    if credentials is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, INVALID_SESSION_MESSAGE)
+    return get_user_from_token(credentials.credentials, db)

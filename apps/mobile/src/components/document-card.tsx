@@ -52,7 +52,7 @@ export function DocumentCard({ document, onReview, onOpen, onDelete, index = 0 }
         <View style={styles.divider} />
         <View style={styles.actions}>
           {canReview && onReview ? <Pressable accessibilityRole="button" onPress={onReview} style={styles.actionButton}><Text style={styles.review}>Rever</Text></Pressable> : null}
-          {document.uri && onOpen ? <Pressable accessibilityRole="button" onPress={onOpen} style={styles.actionButton}><Text style={styles.open}>Abrir</Text></Pressable> : <Text style={styles.openMuted}>Ficheiro indisponível</Text>}
+          {document.fileId && onOpen ? <Pressable accessibilityRole="button" onPress={onOpen} style={styles.actionButton}><Text style={styles.open}>Abrir</Text></Pressable> : <Text style={styles.openMuted}>Ficheiro indisponível</Text>}
           <Pressable accessibilityLabel={`Eliminar ${document.name}`} accessibilityRole="button" onPress={onDelete} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}><Text style={styles.delete}>Eliminar</Text></Pressable>
         </View>
       </View>

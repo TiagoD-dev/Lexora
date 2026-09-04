@@ -54,7 +54,7 @@ export type CaseDocument = {
   type: string;
   mimeType?: string;
   size?: number;
-  uri?: string;
+  fileId?: string;
   status: 'Disponível' | 'A processar' | 'Erro';
   extractionStatus?: 'Por extrair' | 'A processar' | 'Por rever' | 'Revisto' | 'Erro';
   extractedText?: string;

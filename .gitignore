@@ -13,6 +13,7 @@ __pycache__/
 .env
 *.db
 uploads/
+documents_storage/
 
 # Tool caches
 .npm-cache/

@@ -3,15 +3,17 @@ import re
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from . import models
-from .db import Base, engine
+from .db import Base, engine, get_db
 from .routers import auth, billing, cases, clients, legal_updates, notifications
-from .security import get_current_user
+from .security import get_current_user, get_user_from_token
 
 Base.metadata.create_all(bind=engine)
 
@@ -51,6 +53,8 @@ def health_check() -> dict[str, str]:
 
 
 MAX_FILE_SIZE = 25 * 1024 * 1024
+DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "documents_storage"
+DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def extract_text(filename: str, content: bytes) -> tuple[str, int | None]:
@@ -117,7 +121,7 @@ def build_suggestions(text: str) -> list[dict]:
 @app.post("/documents/extract", tags=["documents"])
 async def extract_document(
     file: UploadFile = File(...),
-    _current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(get_current_user),
 ) -> dict:
     content = await file.read(MAX_FILE_SIZE + 1)
     if len(content) > MAX_FILE_SIZE:
@@ -132,4 +136,26 @@ async def extract_document(
         raise HTTPException(422, f"Não foi possível extrair o documento: {error}") from error
     if not text.strip():
         raise HTTPException(422, "Não foi encontrado texto. O documento pode necessitar de OCR.")
-    return {"text": text[:250_000], "characterCount": len(text), "pageCount": pages, "suggestions": build_suggestions(text)}
+    extension = Path(file.filename or "").suffix.lower()[:10]
+    stored_name = f"{current_user.id}_{uuid4().hex}{extension}"
+    (DOCUMENTS_DIR / stored_name).write_bytes(content)
+    return {
+        "text": text[:250_000],
+        "characterCount": len(text),
+        "pageCount": pages,
+        "suggestions": build_suggestions(text),
+        "fileId": stored_name,
+    }
+
+
+@app.get("/documents/file/{stored_name}", tags=["documents"])
+def get_document_file(stored_name: str, token: str = Query(...), db: Session = Depends(get_db)) -> FileResponse:
+    if "/" in stored_name or "\\" in stored_name or ".." in stored_name:
+        raise HTTPException(404, "Ficheiro não encontrado.")
+    user = get_user_from_token(token, db)
+    if not stored_name.startswith(f"{user.id}_"):
+        raise HTTPException(404, "Ficheiro não encontrado.")
+    path = DOCUMENTS_DIR / stored_name
+    if not path.is_file():
+        raise HTTPException(404, "Ficheiro não encontrado.")
+    return FileResponse(path)

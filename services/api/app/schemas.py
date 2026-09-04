@@ -125,6 +125,14 @@ class LegalUpdateOut(BaseModel):
     areas: list[str] = Field(default_factory=list)
 
 
+class SimilarCaseOut(BaseModel):
+    title: str
+    court: str = ""
+    date: str = ""
+    summary: str
+    url: str = ""
+
+
 class AssistantRequest(BaseModel):
     prompt: str = Field(min_length=1)
 

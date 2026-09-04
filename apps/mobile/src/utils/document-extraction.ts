@@ -2,7 +2,7 @@ import type { DocumentSuggestion } from '@/types/case';
 import { getStoredToken } from '@/services/api-client';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
-export type ExtractionResult = { text: string; characterCount: number; pageCount?: number; suggestions: DocumentSuggestion[] };
+export type ExtractionResult = { text: string; characterCount: number; pageCount?: number; suggestions: DocumentSuggestion[]; fileId: string };
 
 export async function extractDocument(file: File | { uri: string; name: string; mimeType?: string }): Promise<ExtractionResult> {
   const body = new FormData();

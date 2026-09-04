@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DocumentCard } from '@/components/document-card';
 import { DocumentUpload } from '@/components/document-upload';
 import { EmptyState } from '@/components/empty-state';
+import { OfflineBanner } from '@/components/offline-banner';
 import { SelectField } from '@/components/select-field';
 import { useCases } from '@/providers/cases-provider';
 import { useAppTheme } from '@/providers/theme-provider';
@@ -38,6 +39,8 @@ export default function DocumentsScreen() {
           <Text style={styles.subtitle}>Ficheiros associados aos Casos, com extração e revisão de conteúdo</Text>
         </View>
 
+        <OfflineBanner />
+
         <View style={styles.hero}>
           <HeroStat value={documents.length} label="Total" styles={styles} />
           <View style={styles.heroDivider} />
@@ -70,7 +73,7 @@ export default function DocumentsScreen() {
                 document={document}
                 index={index}
                 onReview={() => router.push({ pathname: '/documents/review/[caseId]/[documentId]' as never, params: { caseId: document.caseId, documentId: document.id } } as never)}
-                onOpen={document.uri ? () => openDocument(document) : undefined}
+                onOpen={document.fileId ? () => openDocument(document) : undefined}
                 onDelete={() => confirmDestructive({ title: 'Eliminar documento?', message: `O registo "${document.name}" será removido do Caso ${document.reference}.`, onConfirm: () => deleteDocument(document.caseId, document.id) })}
               />
             ))}

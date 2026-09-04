@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -73,6 +74,58 @@ def _generate_assistant_reply(prompt: str, case: models.Case) -> str:
         config=genai_types.GenerateContentConfig(system_instruction=ASSISTANT_SYSTEM_INSTRUCTION),
     )
     return response.text or ASSISTANT_DISCLAIMER
+
+
+SIMILAR_CASES_SYSTEM_INSTRUCTION = (
+    "És um assistente de pesquisa jurídica. Usa a pesquisa Google para encontrar casos "
+    "reais e já concluídos (acórdãos, sentenças) de tribunais portugueses ou europeus "
+    "semelhantes ao Caso descrito. Responde APENAS com um array JSON, sem markdown, com "
+    "no máximo 5 objetos no formato "
+    '{"title": string, "court": string, "date": "AAAA-MM-DD" ou "", "summary": string até 240 '
+    'caracteres, "url": string}. Se não encontrares nenhum caso real e verificável, devolve [].'
+)
+
+_SIMILAR_CASES_CACHE_TTL_SECONDS = 900
+_similar_cases_cache: dict[str, tuple[float, list[dict]]] = {}
+
+
+def _generate_similar_cases(case: models.Case) -> list[dict]:
+    cache_key = f"{case.id}:{case.updatedAt}"
+    cached = _similar_cases_cache.get(cache_key)
+    now = time.monotonic()
+    if cached and now - cached[0] < _SIMILAR_CASES_CACHE_TTL_SECONDS:
+        return cached[1]
+    context = {
+        "title": case.title,
+        "area": case.area,
+        "court": case.court,
+        "description": case.description,
+        "legalIssues": case.legalIssues,
+    }
+    client = genai.Client(
+        api_key=os.environ["GEMINI_API_KEY"],
+        http_options=genai_types.HttpOptions(retry_options=genai_types.HttpRetryOptions(attempts=3)),
+    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=f"Caso (JSON):\n{json.dumps(context, ensure_ascii=False)}",
+            config=genai_types.GenerateContentConfig(
+                system_instruction=SIMILAR_CASES_SYSTEM_INSTRUCTION,
+                tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())],
+            ),
+        )
+        text = (response.text or "[]").strip()
+        if text.startswith("```"):
+            text = text.strip("`").removeprefix("json").strip()
+        results = json.loads(text)
+        if not isinstance(results, list):
+            results = []
+    except Exception:
+        logger.exception("Falha ao gerar casos semelhantes para o caso %s", case.id)
+        results = cached[1] if cached else []
+    _similar_cases_cache[cache_key] = (now, results)
+    return results
 
 
 @router.get("", response_model=list[schemas.CasePayload])
@@ -190,3 +243,9 @@ def remove_collaborator(case_id: str, email: str, db: Session = Depends(get_db),
     case.collaboratorEmails = [candidate for candidate in case.collaboratorEmails if candidate != email.lower()]
     db.commit()
     return case
+
+
+@router.get("/{case_id}/similar-cases", response_model=list[schemas.SimilarCaseOut])
+def get_similar_cases(case_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    case = _get_owned(db, current_user, case_id)
+    return _generate_similar_cases(case)

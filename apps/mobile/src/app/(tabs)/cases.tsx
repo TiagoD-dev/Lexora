@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppInput } from '@/components/app-input';
 import { CaseCard } from '@/components/case-card';
 import { EmptyState } from '@/components/empty-state';
+import { OfflineBanner } from '@/components/offline-banner';
 import { useCases } from '@/providers/cases-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
@@ -22,6 +23,7 @@ export default function CasesScreen() {
   return <SafeAreaView edges={['top']} style={styles.screen}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
     <View style={styles.intro}><View><Text style={styles.eyebrow}>GESTÃO JURÍDICA</Text><Text style={styles.title}>Os meus casos</Text><Text style={styles.subtitle}>Casos, prazos e informação organizada por assunto</Text></View><Pressable accessibilityLabel="Criar novo caso" onPress={() => router.push('/cases/new')} style={styles.add}><Text style={styles.addText}>＋</Text></Pressable></View>
     <View style={styles.hero}><HeroStat value={cases.length} label="Total" styles={styles} /><View style={styles.heroDivider} /><HeroStat value={emAnalise} label="Em análise" styles={styles} /><View style={styles.heroDivider} /><HeroStat value={concluidos} label="Concluídos" styles={styles} /></View>
+    <OfflineBanner />
     <AppInput accessibilityLabel="Pesquisar casos" onChangeText={setQuery} placeholder="Pesquisar cliente, caso, área ou tribunal…" returnKeyType="search" value={query} />
     <FilterRow label="Estado" values={statuses} selected={status} onSelect={(value) => setStatus(value as Filter)} styles={styles} />
     <FilterRow label="Área" values={areas} selected={area} onSelect={setArea} styles={styles} />
