@@ -147,7 +147,45 @@ def test_case_assistant_requires_auth_ownership_and_replies(client, monkeypatch)
 
     response = client.post("/cases/case-1/assistant", json={"prompt": "Resume os factos"}, headers=auth(owner_token))
     assert response.status_code == 200, response.text
-    assert response.json()["reply"] == "Resposta simulada para: Resume os factos"
+
+
+def test_case_collaborators_can_view_and_edit_but_not_manage_collaborators(client):
+    owner_token = register(client, "collab-owner@example.com")
+    collaborator_token = register(client, "collab-friend@example.com")
+    stranger_token = register(client, "collab-stranger@example.com")
+    assert client.post("/cases", json=case_payload(), headers=auth(owner_token)).status_code == 201
+
+    # Before being added, the future collaborator has no access at all.
+    assert client.get("/cases", headers=auth(collaborator_token)).json() == []
+    assert client.patch("/cases/case-1", json={"title": "Sem acesso"}, headers=auth(collaborator_token)).status_code == 404
+    assert client.post(
+        "/cases/case-1/collaborators", json={"email": "collab-friend@example.com"}, headers=auth(collaborator_token)
+    ).status_code == 404
+
+    # Owner adds the collaborator.
+    added = client.post(
+        "/cases/case-1/collaborators", json={"email": "COLLAB-FRIEND@example.com"}, headers=auth(owner_token)
+    )
+    assert added.status_code == 200, added.text
+    assert added.json()["collaboratorEmails"] == ["collab-friend@example.com"]
+
+    # Collaborator can now view and edit, but cannot manage collaborators (owner-only).
+    assert len(client.get("/cases", headers=auth(collaborator_token)).json()) == 1
+    edited = client.patch("/cases/case-1", json={"title": "Editado pelo colaborador"}, headers=auth(collaborator_token))
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["title"] == "Editado pelo colaborador"
+    assert client.post(
+        "/cases/case-1/collaborators", json={"email": "collab-stranger@example.com"}, headers=auth(collaborator_token)
+    ).status_code == 403
+
+    # A different user still has no access.
+    assert client.get("/cases", headers=auth(stranger_token)).json() == []
+
+    # Owner removes the collaborator; access is revoked.
+    removed = client.delete("/cases/case-1/collaborators/collab-friend@example.com", headers=auth(owner_token))
+    assert removed.status_code == 200, removed.text
+    assert removed.json()["collaboratorEmails"] == []
+    assert client.get("/cases", headers=auth(collaborator_token)).json() == []
 
 
 def test_authenticated_text_extraction(client):

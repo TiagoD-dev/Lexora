@@ -60,3 +60,4 @@ class Case(Base):
     facts: Mapped[list] = mapped_column(JSON, default=list)
     legalIssues: Mapped[list] = mapped_column(JSON, default=list)
     missingFacts: Mapped[list] = mapped_column(JSON, default=list)
+    collaboratorEmails: Mapped[list] = mapped_column(JSON, default=list)

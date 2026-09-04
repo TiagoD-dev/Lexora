@@ -110,6 +110,7 @@ class CasePayload(BaseModel):
     facts: list[dict[str, Any]] = Field(default_factory=list)
     legalIssues: list[dict[str, Any]] = Field(default_factory=list)
     missingFacts: list[dict[str, Any]] = Field(default_factory=list)
+    collaboratorEmails: list[str] = Field(default_factory=list)
 
 
 class LegalUpdateOut(BaseModel):
@@ -153,3 +154,8 @@ class CaseUpdate(BaseModel):
     facts: list[dict[str, Any]] | None = None
     legalIssues: list[dict[str, Any]] | None = None
     missingFacts: list[dict[str, Any]] | None = None
+    collaboratorEmails: list[str] | None = None
+
+
+class CollaboratorAdd(BaseModel):
+    email: EmailStr

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
-import { createCaseRemote, deleteCaseRemote, listCasesRemote, updateCaseRemote } from '@/services/cases-service';
+import { addCollaboratorRemote, createCaseRemote, deleteCaseRemote, listCasesRemote, removeCollaboratorRemote, updateCaseRemote } from '@/services/cases-service';
 import type { CaseDocument, CaseEntity, CaseFact, CaseNote, CaseStatus, CaseTask, DeadlineKind, FactStatus, LegalCase, LegalIssue, MissingFact, RecurrenceRule, TaskPriority } from '@/types/case';
 import { nextOccurrence } from '@/utils/deadlines';
 import { cancelTaskReminders, scheduleTaskReminders } from '@/utils/task-notifications';
@@ -21,6 +21,7 @@ type CasesContextValue = {
   addFact: (id: string, statement: string, source?: Partial<Pick<CaseFact, 'source' | 'sourceDocumentId' | 'sourceDocumentName' | 'sourceSuggestionId' | 'sourceExcerpt' | 'sourceLocation' | 'reviewedAt' | 'relevantDate'>>) => void; updateFactStatus: (caseId: string, factId: string, status: FactStatus) => void;
   addEntity: (id: string, name: string, role: string) => void; addLegalIssue: (id: string, title: string) => void;
   addMissingFact: (id: string, question: string) => void; toggleMissingFact: (caseId: string, missingFactId: string) => void;
+  addCollaborator: (caseId: string, email: string) => Promise<void>; removeCollaborator: (caseId: string, email: string) => Promise<void>;
 };
 const CasesContext = createContext<CasesContextValue | null>(null);
 const STORAGE_KEY = '@lexora/cases-cache/v1';
@@ -55,6 +56,7 @@ function normalizeCase(item: Partial<LegalCase>): LegalCase {
     facts: Array.isArray(item.facts) ? item.facts.map((fact) => ({ ...fact, source: fact.source ?? 'Utilizador', status: fact.status ?? 'Por confirmar' })) : [],
     legalIssues: Array.isArray(item.legalIssues) ? item.legalIssues : [],
     missingFacts: Array.isArray(item.missingFacts) ? item.missingFacts : [],
+    collaboratorEmails: Array.isArray(item.collaboratorEmails) ? item.collaboratorEmails : [],
   };
 }
 
@@ -102,7 +104,7 @@ export function CasesProvider({ children }: { children: ReactNode }) {
   const createCase = (draft: CaseDraft) => {
     const id = uid(); const now = new Date().toISOString();
     const sequence = String(cases.length + 1).padStart(3, '0');
-    const item: LegalCase = { id, reference: `LEX-${new Date().getFullYear()}-${sequence}`, ...draft, createdAt: now, updatedAt: now, notes: [], tasks: [], documents: [], timeline: [{ id: uid(), title: 'Caso criado', date: now }], entities: [{ id: uid(), name: draft.client, role: 'Cliente', type: 'Pessoa' }], facts: [], legalIssues: [], missingFacts: [] };
+    const item: LegalCase = { id, reference: `LEX-${new Date().getFullYear()}-${sequence}`, ...draft, createdAt: now, updatedAt: now, notes: [], tasks: [], documents: [], timeline: [{ id: uid(), title: 'Caso criado', date: now }], entities: [{ id: uid(), name: draft.client, role: 'Cliente', type: 'Pessoa' }], facts: [], legalIssues: [], missingFacts: [], collaboratorEmails: [] };
     setCases((all) => [item, ...all]);
     createCaseRemote(item).catch(() => undefined);
     return id;
@@ -175,7 +177,15 @@ export function CasesProvider({ children }: { children: ReactNode }) {
     const resolved = !fact.resolved;
     return touch({ ...item, missingFacts: item.missingFacts.map((entry) => entry.id === missingFactId ? { ...entry, resolved } : entry), timeline: resolved ? [{ id: uid(), title: `Pergunta resolvida: ${fact.question}`, date: new Date().toISOString() }, ...item.timeline] : item.timeline });
   });
-  const value = { cases, hydrated, getCase: (id: string) => cases.find((item) => item.id === id), createCase, updateCase, archiveCase, deleteCase, syncClientName, addNote, addTask, updateTask, deleteTask, toggleTask, addDocument, updateDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact };
+  const addCollaborator = async (caseId: string, email: string) => {
+    const updated = await addCollaboratorRemote(caseId, email);
+    setCases((all) => all.map((item) => item.id === caseId ? { ...item, collaboratorEmails: updated.collaboratorEmails } : item));
+  };
+  const removeCollaborator = async (caseId: string, email: string) => {
+    const updated = await removeCollaboratorRemote(caseId, email);
+    setCases((all) => all.map((item) => item.id === caseId ? { ...item, collaboratorEmails: updated.collaboratorEmails } : item));
+  };
+  const value = { cases, hydrated, getCase: (id: string) => cases.find((item) => item.id === id), createCase, updateCase, archiveCase, deleteCase, syncClientName, addNote, addTask, updateTask, deleteTask, toggleTask, addDocument, updateDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact, addCollaborator, removeCollaborator };
   return <CasesContext.Provider value={value}>{children}</CasesContext.Provider>;
 }
 

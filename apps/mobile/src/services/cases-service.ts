@@ -16,3 +16,11 @@ export function updateCaseRemote(id: string, patch: Partial<LegalCase>): Promise
 export function deleteCaseRemote(id: string): Promise<void> {
   return apiFetch<void>(`/cases/${id}`, { method: 'DELETE' });
 }
+
+export function addCollaboratorRemote(caseId: string, email: string): Promise<LegalCase> {
+  return apiFetch<LegalCase>(`/cases/${caseId}/collaborators`, { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export function removeCollaboratorRemote(caseId: string, email: string): Promise<LegalCase> {
+  return apiFetch<LegalCase>(`/cases/${caseId}/collaborators/${encodeURIComponent(email)}`, { method: 'DELETE' });
+}
