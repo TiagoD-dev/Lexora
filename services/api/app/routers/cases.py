@@ -26,9 +26,18 @@ ASSISTANT_SYSTEM_INSTRUCTION = (
 
 
 def _get_owned(db: Session, current_user: models.User, case_id: str) -> models.Case:
+    """Loads a case accessible to current_user: the owner, or a collaborator by email."""
     case = db.get(models.Case, case_id)
-    if case is None or case.ownerId != current_user.id:
+    if case is None or (case.ownerId != current_user.id and current_user.email not in (case.collaboratorEmails or [])):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Caso não encontrado.")
+    return case
+
+
+def _get_as_owner(db: Session, current_user: models.User, case_id: str) -> models.Case:
+    """Like _get_owned, but rejects collaborators — for owner-only actions (managing collaborators)."""
+    case = _get_owned(db, current_user, case_id)
+    if case.ownerId != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Apenas o dono do caso pode fazer isto.")
     return case
 
 
@@ -58,7 +67,12 @@ def _generate_assistant_reply(prompt: str, case: models.Case) -> str:
 
 @router.get("", response_model=list[schemas.CasePayload])
 def list_cases(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return db.execute(select(models.Case).where(models.Case.ownerId == current_user.id)).scalars().all()
+    cases = db.execute(select(models.Case)).scalars().all()
+    return [
+        case
+        for case in cases
+        if case.ownerId == current_user.id or current_user.email in (case.collaboratorEmails or [])
+    ]
 
 
 @router.post("", response_model=schemas.CasePayload, status_code=status.HTTP_201_CREATED)
@@ -92,3 +106,21 @@ def ask_assistant(case_id: str, payload: schemas.AssistantRequest, db: Session =
     case = _get_owned(db, current_user, case_id)
     reply = _generate_assistant_reply(payload.prompt, case)
     return {"reply": reply}
+
+
+@router.post("/{case_id}/collaborators", response_model=schemas.CasePayload)
+def add_collaborator(case_id: str, payload: schemas.CollaboratorAdd, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    case = _get_as_owner(db, current_user, case_id)
+    email = payload.email.lower()
+    if email not in case.collaboratorEmails:
+        case.collaboratorEmails = [*case.collaboratorEmails, email]
+        db.commit()
+    return case
+
+
+@router.delete("/{case_id}/collaborators/{email}", response_model=schemas.CasePayload)
+def remove_collaborator(case_id: str, email: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    case = _get_as_owner(db, current_user, case_id)
+    case.collaboratorEmails = [candidate for candidate in case.collaboratorEmails if candidate != email.lower()]
+    db.commit()
+    return case

@@ -100,4 +100,5 @@ export type LegalCase = {
   facts: CaseFact[];
   legalIssues: LegalIssue[];
   missingFacts: MissingFact[];
+  collaboratorEmails: string[];
 };
