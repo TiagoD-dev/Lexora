@@ -5,6 +5,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { createCaseRemote, deleteCaseRemote, listCasesRemote, updateCaseRemote } from '@/services/cases-service';
 import type { CaseDocument, CaseEntity, CaseFact, CaseNote, CaseStatus, CaseTask, DeadlineKind, FactStatus, LegalCase, LegalIssue, MissingFact, RecurrenceRule, TaskPriority } from '@/types/case';
 import { nextOccurrence } from '@/utils/deadlines';
+import { cancelTaskReminders, scheduleTaskReminders } from '@/utils/task-notifications';
 
 type CaseDraft = Pick<LegalCase, 'title' | 'client' | 'clientId' | 'area' | 'court' | 'processNumber' | 'responsible' | 'priority' | 'description' | 'status'>;
 type CasesContextValue = {
@@ -13,7 +14,7 @@ type CasesContextValue = {
   archiveCase: (id: string) => void; deleteCase: (id: string) => void;
   syncClientName: (clientId: string, name: string) => void;
   addNote: (id: string, text: string) => void; addTask: (id: string, task: { title: string; description?: string; dueDate?: string; priority?: TaskPriority; deadlineKind?: DeadlineKind; recurrence?: RecurrenceRule; reminderDays?: number[] }) => void;
-  updateTask: (caseId: string, taskId: string, patch: Partial<Pick<CaseTask, 'title' | 'description' | 'dueDate' | 'priority'>>) => void; deleteTask: (caseId: string, taskId: string) => void;
+  updateTask: (caseId: string, taskId: string, patch: Partial<Pick<CaseTask, 'title' | 'description' | 'dueDate' | 'priority' | 'reminderDays'>>) => void; deleteTask: (caseId: string, taskId: string) => void;
   toggleTask: (caseId: string, taskId: string) => void; addDocument: (id: string, document: Omit<CaseDocument, 'id' | 'addedAt' | 'status'>) => void;
   updateDocument: (caseId: string, documentId: string, patch: Partial<Omit<CaseDocument, 'id' | 'addedAt'>>) => void;
   deleteDocument: (caseId: string, documentId: string) => void;
@@ -116,20 +117,46 @@ export function CasesProvider({ children }: { children: ReactNode }) {
     return next;
   }));
   const addNote = (id: string, text: string) => mutate(id, (item) => touch({ ...item, notes: [{ id: uid(), text, createdAt: new Date().toISOString() } as CaseNote, ...item.notes], timeline: [{ id: uid(), title: `Nota adicionada: ${trunc(text)}`, date: new Date().toISOString() }, ...item.timeline] }));
-  const addTask = (id: string, task: { title: string; description?: string; dueDate?: string; priority?: TaskPriority; deadlineKind?: DeadlineKind; recurrence?: RecurrenceRule; reminderDays?: number[] }) => mutate(id, (item) => touch({ ...item, tasks: [{ id: uid(), ...task, priority: task.priority ?? 'Normal', deadlineKind: task.deadlineKind ?? 'Interno', recurrence: task.recurrence ?? 'Nenhuma', reminderDays: task.reminderDays ?? [], completed: false, createdAt: new Date().toISOString() }, ...item.tasks], timeline: [{ id: uid(), title: `Tarefa criada: ${task.title}`, date: new Date().toISOString() }, ...item.timeline] }));
-  const updateTask = (caseId: string, taskId: string, patch: Partial<Pick<CaseTask, 'title' | 'description' | 'dueDate' | 'priority'>>) => mutate(caseId, (item) => touch({ ...item, tasks: item.tasks.map((task) => task.id === taskId ? { ...task, ...patch } : task) }));
-  const deleteTask = (caseId: string, taskId: string) => mutate(caseId, (item) => { const task = item.tasks.find((entry) => entry.id === taskId); return touch({ ...item, tasks: item.tasks.filter((entry) => entry.id !== taskId), timeline: [{ id: uid(), title: `Tarefa eliminada: ${task?.title ?? 'tarefa'}`, date: new Date().toISOString() }, ...item.timeline] }); });
-  const toggleTask = (caseId: string, taskId: string) => mutate(caseId, (item) => {
-    const current = item.tasks.find((task) => task.id === taskId);
-    if (!current) return item;
-    const completing = !current.completed;
-    const nextDate = completing && current.dueDate ? nextOccurrence(current.dueDate, current.recurrence) : undefined;
-    const alreadyCreated = item.tasks.some((task) => task.recurrenceSourceId === current.id && task.dueDate === nextDate);
-    const recurringTask: CaseTask[] = nextDate && !alreadyCreated ? [{ ...current, id: uid(), dueDate: nextDate, completed: false, createdAt: new Date().toISOString(), recurrenceSourceId: current.id }] : [];
-    const toggleEntry = { id: uid(), title: `${completing ? 'Tarefa concluída' : 'Tarefa reaberta'}: ${current.title}`, date: new Date().toISOString() };
-    const recurEntry = recurringTask.length ? [{ id: uid(), title: `Próxima ocorrência criada: ${current.title}`, date: new Date().toISOString() }] : [];
-    return touch({ ...item, tasks: [...recurringTask, ...item.tasks.map((task) => task.id === taskId ? { ...task, completed: completing } : task)], timeline: [...recurEntry, toggleEntry, ...item.timeline] });
-  });
+  const addTask = (id: string, task: { title: string; description?: string; dueDate?: string; priority?: TaskPriority; deadlineKind?: DeadlineKind; recurrence?: RecurrenceRule; reminderDays?: number[] }) => {
+    let created: CaseTask | undefined;
+    mutate(id, (item) => {
+      created = { id: uid(), ...task, priority: task.priority ?? 'Normal', deadlineKind: task.deadlineKind ?? 'Interno', recurrence: task.recurrence ?? 'Nenhuma', reminderDays: task.reminderDays ?? [], completed: false, createdAt: new Date().toISOString() };
+      return touch({ ...item, tasks: [created!, ...item.tasks], timeline: [{ id: uid(), title: `Tarefa criada: ${task.title}`, date: new Date().toISOString() }, ...item.timeline] });
+    });
+    const caseTitle = cases.find((entry) => entry.id === id)?.title ?? '';
+    if (created) scheduleTaskReminders(created, caseTitle).catch(() => undefined);
+  };
+  const updateTask = (caseId: string, taskId: string, patch: Partial<Pick<CaseTask, 'title' | 'description' | 'dueDate' | 'priority' | 'reminderDays'>>) => {
+    let updated: CaseTask | undefined;
+    mutate(caseId, (item) => touch({ ...item, tasks: item.tasks.map((task) => {
+      if (task.id !== taskId) return task;
+      updated = { ...task, ...patch };
+      return updated;
+    }) }));
+    const caseTitle = cases.find((entry) => entry.id === caseId)?.title ?? '';
+    if (updated) scheduleTaskReminders(updated, caseTitle).catch(() => undefined);
+  };
+  const deleteTask = (caseId: string, taskId: string) => { cancelTaskReminders(taskId).catch(() => undefined); mutate(caseId, (item) => { const task = item.tasks.find((entry) => entry.id === taskId); return touch({ ...item, tasks: item.tasks.filter((entry) => entry.id !== taskId), timeline: [{ id: uid(), title: `Tarefa eliminada: ${task?.title ?? 'tarefa'}`, date: new Date().toISOString() }, ...item.timeline] }); }); };
+  const toggleTask = (caseId: string, taskId: string) => {
+    let toggled: CaseTask | undefined;
+    mutate(caseId, (item) => {
+      const current = item.tasks.find((task) => task.id === taskId);
+      if (!current) return item;
+      const completing = !current.completed;
+      const nextDate = completing && current.dueDate ? nextOccurrence(current.dueDate, current.recurrence) : undefined;
+      const alreadyCreated = item.tasks.some((task) => task.recurrenceSourceId === current.id && task.dueDate === nextDate);
+      const recurringTask: CaseTask[] = nextDate && !alreadyCreated ? [{ ...current, id: uid(), dueDate: nextDate, completed: false, createdAt: new Date().toISOString(), recurrenceSourceId: current.id }] : [];
+      if (recurringTask.length) scheduleTaskReminders(recurringTask[0], item.title).catch(() => undefined);
+      toggled = { ...current, completed: completing };
+      const toggleEntry = { id: uid(), title: `${completing ? 'Tarefa concluída' : 'Tarefa reaberta'}: ${current.title}`, date: new Date().toISOString() };
+      const recurEntry = recurringTask.length ? [{ id: uid(), title: `Próxima ocorrência criada: ${current.title}`, date: new Date().toISOString() }] : [];
+      return touch({ ...item, tasks: [...recurringTask, ...item.tasks.map((task) => task.id === taskId ? toggled! : task)], timeline: [...recurEntry, toggleEntry, ...item.timeline] });
+    });
+    if (!toggled) return;
+    // Tarefa concluída: sem lembretes por vir. Tarefa reaberta: reagenda a partir da data existente.
+    if (toggled.completed) cancelTaskReminders(taskId).catch(() => undefined);
+    else scheduleTaskReminders(toggled, cases.find((entry) => entry.id === caseId)?.title ?? '').catch(() => undefined);
+  };
   const addDocument = (id: string, document: Omit<CaseDocument, 'id' | 'addedAt' | 'status'>) => mutate(id, (item) => touch({ ...item, documents: [{ id: uid(), ...document, status: 'Disponível', extractionStatus: document.extractionStatus ?? 'Por extrair', suggestions: document.suggestions ?? [], addedAt: new Date().toISOString() }, ...item.documents], timeline: [{ id: uid(), title: `Documento adicionado: ${document.name}`, date: new Date().toISOString() }, ...item.timeline] }));
   const updateDocument = (caseId: string, documentId: string, patch: Partial<Omit<CaseDocument, 'id' | 'addedAt'>>) => mutate(caseId, (item) => touch({ ...item, documents: item.documents.map((document) => document.id === documentId ? { ...document, ...patch } : document) }));
   const deleteDocument = (caseId: string, documentId: string) => mutate(caseId, (item) => { const document = item.documents.find((entry) => entry.id === documentId); return touch({ ...item, documents: item.documents.filter((entry) => entry.id !== documentId), timeline: [{ id: uid(), title: `Documento eliminado: ${document?.name ?? 'ficheiro'}`, date: new Date().toISOString() }, ...item.timeline] }); });
