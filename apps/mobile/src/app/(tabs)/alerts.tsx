@@ -1,69 +1,45 @@
-import { Fragment } from 'react'; import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'; import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLegalUpdates } from '@/providers/legal-updates-provider'; import { Icon, type IconName } from '@/components/icon';
-import { useAppTheme } from '@/providers/theme-provider'; import { radius, type ThemeColors } from '@/theme'; import { hashTheme } from '@/utils/palette'; import type { LegalUpdate } from '@/types/legal-update';
+import { useMemo, useState } from 'react'; import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'; import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLegalUpdates } from '@/providers/legal-updates-provider'; import { Icon, type IconName } from '@/components/icon'; import { EmptyState } from '@/components/empty-state'; import { kindIcon, LegalUpdateCard } from '@/components/legal-update-card'; import { FilterChip, SearchBox, StatTiles } from '@/components/list-kit';
+import { useAppTheme } from '@/providers/theme-provider'; import { radius, type ThemeColors } from '@/theme'; import type { LegalUpdate } from '@/types/legal-update';
 
-const formatDate=(value:string|null)=>value?new Intl.DateTimeFormat('pt-PT',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(`${value}T12:00:00`)):'Fonte oficial';
+type Kind = 'Todas' | LegalUpdate['sourceKind'];
+const kinds: Kind[] = ['Todas', 'Portugal', 'União Europeia', 'Jurisprudência'];
+const icons: Record<Kind, IconName> = { Todas: 'newspaper-variant-outline', ...kindIcon };
 
 export default function AlertsScreen(){
   const {updates,hydrated,error,refresh}=useLegalUpdates(); const {colors}=useAppTheme(); const styles=makeStyles(colors);
-  const stats=[
-    {value:String(updates.length),label:'Publicações acompanhadas'},
-    {value:String(updates.filter((item)=>item.sourceKind==='Portugal').length),label:'Diário da República'},
-    {value:String(updates.filter((item)=>item.sourceKind==='União Europeia').length),label:'União Europeia'},
-  ];
-  return <SafeAreaView edges={['top']} style={styles.screen}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-    <View style={styles.intro}><View style={styles.introCopy}><Text style={styles.eyebrow}>MONITORIZAÇÃO</Text><Text style={styles.title}>Atualidade jurídica</Text><Text style={styles.subtitle}>Publicações oficiais nacionais, da União Europeia e jurisprudência de referência.</Text></View><Pressable accessibilityRole="button" onPress={refresh} style={styles.refresh}><Text style={styles.refreshText}>Atualizar</Text></Pressable></View>
-    {hydrated&&updates.length>0?<View style={styles.hero}>{stats.map((stat,index)=><Fragment key={stat.label}>{index>0?<View style={styles.heroDivider}/>:null}<View style={styles.heroStat}><Text style={styles.heroValue}>{stat.value}</Text><Text style={styles.heroLabel}>{stat.label}</Text></View></Fragment>)}</View>:null}
+  const [query,setQuery]=useState(''); const [kind,setKind]=useState<Kind>('Todas');
+  const count=(k:Kind)=>k==='Todas'?updates.length:updates.filter((item)=>item.sourceKind===k).length;
+  const visible=useMemo(()=>{const q=query.trim().toLocaleLowerCase('pt-PT');return updates.filter((item)=>(kind==='Todas'||item.sourceKind===kind)&&(!q||`${item.title} ${item.summary} ${item.source} ${item.areas.join(' ')}`.toLocaleLowerCase('pt-PT').includes(q))).sort((a,b)=>(b.publishedAt??'').localeCompare(a.publishedAt??''));},[updates,query,kind]);
+  return <SafeAreaView edges={['top']} style={styles.screen}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <View style={styles.intro}><View style={styles.introCopy}><Text style={styles.eyebrow}>MONITORIZAÇÃO</Text><Text style={styles.title}>Atualidade jurídica</Text><Text style={styles.subtitle}>Publicações oficiais nacionais, da União Europeia e jurisprudência de referência.</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Atualizar publicações" onPress={refresh} style={({pressed})=>[styles.refresh,pressed&&styles.pressed]}><Icon name="refresh" size={17} color={colors.primary}/><Text style={styles.refreshText}>Atualizar</Text></Pressable></View>
+    <StatTiles items={[{icon:'newspaper-variant-outline',value:updates.length,label:'Publicações'},{icon:kindIcon.Portugal,value:count('Portugal'),label:'Diário da República'},{icon:kindIcon['União Europeia'],value:count('União Europeia'),label:'União Europeia'},{icon:kindIcon.Jurisprudência,value:count('Jurisprudência'),label:'Jurisprudência'}]}/>
+    <View style={styles.notice}><Icon name="shield-check-outline" size={18} color={colors.primary}/><Text style={styles.noticeText}>Resumos informativos. Confirma sempre o texto na fonte original antes de o aplicar.</Text></View>
+    <SearchBox label="Pesquisar publicações" value={query} onChange={setQuery} placeholder="Pesquisar por tema, diploma ou área…"/>
+    <View style={styles.filters}>{kinds.map((k)=><FilterChip key={k} icon={icons[k]} label={k} count={count(k)} active={kind===k} onPress={()=>setKind(k)}/>)}</View>
     {!hydrated?<View style={styles.state}><ActivityIndicator color={colors.primary}/><Text style={styles.stateText}>A consultar fontes oficiais…</Text></View>
-      :error?<View style={styles.state}><Text style={styles.stateText}>Não foi possível obter as publicações agora.</Text><Pressable onPress={refresh}><Text style={styles.stateRetry}>Tentar novamente</Text></Pressable></View>
-      :updates.length===0?<View style={styles.state}><Text style={styles.stateText}>Sem publicações disponíveis de momento.</Text></View>
-      :<View style={styles.list}>{updates.map((update)=><UpdateCard key={update.id} update={update} colors={colors} styles={styles}/>)}</View>}
+      :error?<View style={styles.state}><Icon name="cloud-off-outline" size={28} color={colors.textSoft}/><Text style={styles.stateText}>Não foi possível obter as publicações agora.</Text><Pressable onPress={refresh}><Text style={styles.stateRetry}>Tentar novamente</Text></Pressable></View>
+      :visible.length===0?<EmptyState symbol="newspaper-variant-outline" title={updates.length?'Nenhuma publicação encontrada':'Sem publicações de momento'} description={updates.length?'Altera o filtro ou a pesquisa.':'Volta a tentar mais tarde.'}/>
+      :<View style={styles.list}>{visible.map((update)=><LegalUpdateCard key={update.id} update={update}/>)}</View>}
   </ScrollView></SafeAreaView>;
-}
-
-function UpdateCard({update,colors,styles}:{update:LegalUpdate;colors:ThemeColors;styles:ReturnType<typeof makeStyles>}){
-  const icon=hashTheme(colors,update.sourceKind); const symbol=update.sourceKind==='Portugal'?'DR':update.sourceKind==='União Europeia'?'UE':'§';
-  return <Pressable accessibilityRole="link" onPress={()=>Linking.openURL(update.url)} style={({pressed})=>[styles.card,pressed&&styles.pressed]}>
-    <View style={[styles.symbol,{backgroundColor:icon.bg}]}><Text style={[styles.symbolText,{color:icon.fg}]}>{symbol}</Text></View>
-    <View style={styles.copy}>
-      <View style={styles.copyTop}><Text style={styles.kind}>{update.sourceKind.toLocaleUpperCase('pt-PT')} · {update.source.toLocaleUpperCase('pt-PT')}</Text>{update.official?<Text style={styles.official}>VERIFICADA</Text>:null}</View>
-      <Text numberOfLines={2} style={styles.cardTitle}>{update.title}</Text>
-      <Text numberOfLines={1} style={styles.summary}>{update.summary}</Text>
-      <Text style={styles.date}>{formatDate(update.publishedAt)}</Text>
-    </View>
-    <Icon name="open-in-new" size={16} color={colors.textSoft} />
-  </Pressable>;
 }
 
 const makeStyles=(colors:ThemeColors)=>StyleSheet.create({
   screen:{flex:1,backgroundColor:colors.background},
-  content:{width:'100%',maxWidth:900,alignSelf:'center',paddingHorizontal:20,paddingBottom:42},
-  intro:{flexDirection:'row',alignItems:'flex-end',justifyContent:'space-between',gap:18,paddingTop:24,paddingBottom:22},
-  introCopy:{flex:1},
+  content:{width:'100%',maxWidth:1000,alignSelf:'center',gap:14,paddingHorizontal:20,paddingBottom:42},
+  intro:{flexDirection:'row',flexWrap:'wrap',alignItems:'flex-end',justifyContent:'space-between',gap:14,paddingTop:24,paddingBottom:8},
+  introCopy:{flexShrink:1},
   eyebrow:{color:colors.accent,fontSize:10,fontWeight:'800',letterSpacing:1.2},
-  title:{marginTop:5,color:colors.text,fontSize:30,fontWeight:'800'},
+  title:{marginTop:5,color:colors.text,fontSize:28,fontWeight:'800'},
   subtitle:{maxWidth:650,marginTop:6,color:colors.textMuted,fontSize:13,lineHeight:19},
-  refresh:{minHeight:44,justifyContent:'center',paddingHorizontal:16,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,backgroundColor:colors.surface},
-  refreshText:{color:colors.primary,fontSize:12,fontWeight:'800'},
-  hero:{flexDirection:'row',alignItems:'center',padding:20,borderRadius:radius.xxl,backgroundColor:colors.primary},
-  heroStat:{flex:1,alignItems:'center'},
-  heroValue:{color:colors.background,fontSize:26,fontWeight:'900'},
-  heroLabel:{marginTop:3,color:colors.primarySoft,fontSize:10,fontWeight:'700',textTransform:'uppercase',letterSpacing:.6},
-  heroDivider:{width:1,height:34,backgroundColor:colors.primaryLight,opacity:.35},
+  refresh:{minHeight:44,flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:16,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,backgroundColor:colors.surface},
+  refreshText:{color:colors.primary,fontSize:13,fontWeight:'800'},
+  pressed:{opacity:.75},
+  notice:{flexDirection:'row',alignItems:'center',gap:10,padding:14,borderRadius:radius.lg,backgroundColor:colors.primaryLight},
+  noticeText:{flex:1,color:colors.textStrong,fontSize:12,lineHeight:18},
+  filters:{flexDirection:'row',flexWrap:'wrap',gap:8},
   state:{alignItems:'center',gap:10,paddingVertical:60},
-  stateText:{color:colors.textMuted,fontSize:12,textAlign:'center'},
-  stateRetry:{color:colors.primary,fontSize:12,fontWeight:'800'},
-  list:{marginTop:22,flexDirection:'row',flexWrap:'wrap',gap:10},
-  card:{flexGrow:1,flexBasis:280,minWidth:260,maxWidth:'100%',flexDirection:'row',alignItems:'flex-start',padding:12,borderWidth:1,borderColor:colors.border,borderRadius:radius.xl,backgroundColor:colors.surface},
-  pressed:{opacity:.72},
-  symbol:{width:34,height:34,alignItems:'center',justifyContent:'center',borderRadius:radius.md},
-  symbolText:{fontSize:11,fontWeight:'900'},
-  copy:{flex:1,marginHorizontal:10},
-  copyTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
-  kind:{color:colors.accent,fontSize:8,fontWeight:'900',letterSpacing:.6},
-  official:{color:colors.successText,fontSize:8,fontWeight:'900'},
-  cardTitle:{marginTop:4,color:colors.textStrong,fontSize:13,fontWeight:'700'},
-  summary:{marginTop:3,color:colors.textMuted,fontSize:11,lineHeight:16},
-  date:{marginTop:6,color:colors.textSoft,fontSize:9},
-  chevron:{marginTop:2,color:colors.primary,fontSize:14},
+  stateText:{color:colors.textMuted,fontSize:13,textAlign:'center'},
+  stateRetry:{color:colors.primary,fontSize:13,fontWeight:'800'},
+  list:{marginTop:6,flexDirection:'row',flexWrap:'wrap',gap:12},
 });

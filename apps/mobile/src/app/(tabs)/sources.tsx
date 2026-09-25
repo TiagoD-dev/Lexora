@@ -1,126 +1,93 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppInput } from '@/components/app-input';
-import { useLegalUpdates } from '@/providers/legal-updates-provider';
+import { EmptyState } from '@/components/empty-state';
 import { Icon, type IconName } from '@/components/icon';
+import { LegalUpdateCard } from '@/components/legal-update-card';
+import { FilterChip, SearchBox, StatTiles } from '@/components/list-kit';
+import { useLegalUpdates } from '@/providers/legal-updates-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
-import { hashTheme } from '@/utils/palette';
 import type { LegalUpdate } from '@/types/legal-update';
 
-const typeOf = (update: LegalUpdate) => (update.sourceKind === 'Jurisprudência' ? 'JURISPRUDÊNCIA' : 'LEGISLAÇÃO');
+type Type = 'Todas' | 'Legislação' | 'Jurisprudência';
+const types: { key: Type; icon: IconName; match: (update: LegalUpdate) => boolean }[] = [
+  { key: 'Todas', icon: 'bookshelf', match: () => true },
+  { key: 'Legislação', icon: 'book-open-page-variant-outline', match: (update) => update.sourceKind !== 'Jurisprudência' },
+  { key: 'Jurisprudência', icon: 'gavel', match: (update) => update.sourceKind === 'Jurisprudência' },
+];
 
 export default function SourcesScreen() {
   const { updates, hydrated, error, refresh } = useLegalUpdates();
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
   const [query, setQuery] = useState('');
+  const [type, setType] = useState<Type>('Todas');
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return updates;
-    return updates.filter((u) => u.title.toLowerCase().includes(q) || u.summary.toLowerCase().includes(q));
-  }, [updates, query]);
-
-  const legislacao = updates.filter((u) => typeOf(u) === 'LEGISLAÇÃO').length;
-  const jurisprudencia = updates.filter((u) => typeOf(u) === 'JURISPRUDÊNCIA').length;
+    const q = query.trim().toLocaleLowerCase('pt-PT');
+    const match = types.find((item) => item.key === type)!.match;
+    return updates.filter((u) => match(u) && (!q || `${u.title} ${u.summary} ${u.source} ${u.areas.join(' ')}`.toLocaleLowerCase('pt-PT').includes(q)));
+  }, [updates, query, type]);
+  const countOf = (key: Type) => updates.filter(types.find((item) => item.key === key)!.match).length;
+  const official = updates.filter((u) => u.official).length;
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.pageIntro}>
           <Text style={styles.eyebrow}>BASE DE CONHECIMENTO</Text>
           <Text style={styles.pageTitle}>Fontes jurídicas</Text>
           <Text style={styles.pageSubtitle}>Legislação e jurisprudência utilizadas nas análises.</Text>
         </View>
-        <View style={styles.hero}>
-          <HeroStat value={updates.length} label="Total" styles={styles} />
-          <View style={styles.heroDivider} />
-          <HeroStat value={legislacao} label="Legislação" styles={styles} />
-          <View style={styles.heroDivider} />
-          <HeroStat value={jurisprudencia} label="Jurisprudência" styles={styles} />
-        </View>
-        <AppInput
-          accessibilityLabel="Pesquisar fontes"
-          placeholder="Pesquisar legislação ou jurisprudência..."
-          value={query}
-          onChangeText={setQuery}
-        />
+        <StatTiles items={[
+          { icon: 'bookshelf', value: updates.length, label: 'Total' },
+          { icon: 'book-open-page-variant-outline', value: countOf('Legislação'), label: 'Legislação' },
+          { icon: 'gavel', value: countOf('Jurisprudência'), label: 'Jurisprudência' },
+          { icon: 'check-decagram-outline', value: official, label: 'Oficiais' },
+        ]} />
         <View style={styles.info}>
-          <Text style={styles.infoTitle}>Fontes verificadas</Text>
-          <Text style={styles.infoText}>Cada referência indicará a redação temporal e a passagem que suporta a resposta.</Text>
+          <View style={styles.infoIcon}><Icon name="shield-check-outline" size={20} color={colors.primary} /></View>
+          <View style={styles.infoCopy}>
+            <Text style={styles.infoTitle}>Fontes verificadas</Text>
+            <Text style={styles.infoText}>Cada referência indicará a redação temporal e a passagem que suporta a resposta.</Text>
+          </View>
         </View>
-        <Text style={styles.sectionTitle}>Consultadas recentemente</Text>
+        <SearchBox label="Pesquisar fontes" value={query} onChange={setQuery} placeholder="Pesquisar legislação ou jurisprudência…" />
+        <View style={styles.filters}>{types.map((item) => <FilterChip key={item.key} icon={item.icon} label={item.key} count={countOf(item.key)} active={type === item.key} onPress={() => setType(item.key)} />)}</View>
         {!hydrated ? (
           <View style={styles.state}><ActivityIndicator color={colors.primary} /><Text style={styles.stateText}>A consultar fontes oficiais…</Text></View>
         ) : error ? (
           <View style={styles.state}>
+            <Icon name="cloud-off-outline" size={28} color={colors.textSoft} />
             <Text style={styles.stateText}>Não foi possível obter as fontes agora.</Text>
             <Pressable onPress={refresh}><Text style={styles.stateRetry}>Tentar novamente</Text></Pressable>
           </View>
         ) : filtered.length === 0 ? (
-          <View style={styles.state}><Text style={styles.stateText}>Sem fontes disponíveis de momento.</Text></View>
+          <EmptyState symbol="bookshelf" title={updates.length ? 'Nenhuma fonte encontrada' : 'Sem fontes de momento'} description={updates.length ? 'Altera o filtro ou a pesquisa.' : 'Volta a tentar mais tarde.'} />
         ) : (
-          <View style={styles.list}>
-            {filtered.map((source) => {
-              const type = typeOf(source);
-              const icon = hashTheme(colors, type);
-              return (
-                <Pressable
-                  key={source.id}
-                  accessibilityRole="link"
-                  onPress={() => Linking.openURL(source.url)}
-                  style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-                >
-                  <View style={[styles.icon, { backgroundColor: icon.bg }]}><Icon name="book-open-page-variant-outline" size={19} color={icon.fg} /></View>
-                  <View style={styles.copy}>
-                    <Text style={styles.type}>{type}</Text>
-                    <Text numberOfLines={1} style={styles.title}>{source.title}</Text>
-                    <Text numberOfLines={1} style={styles.detail}>{source.summary}</Text>
-                  </View>
-                  <Icon name="chevron-right" size={20} color={colors.textSoft} />
-                </Pressable>
-              );
-            })}
-          </View>
+          <View style={styles.list}>{filtered.map((source) => <LegalUpdateCard key={source.id} update={source} />)}</View>
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function HeroStat({ value, label, styles }: { value: number; label: string; styles: ReturnType<typeof makeStyles> }) {
-  return <View style={styles.heroStat}><Text style={styles.heroValue}>{value}</Text><Text style={styles.heroLabel}>{label}</Text></View>;
-}
-
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: 20, paddingBottom: 28, gap: 16 },
-  pageIntro: { paddingTop: 20 },
+  content: { width: '100%', maxWidth: 1000, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 40, gap: 14 },
+  pageIntro: { paddingTop: 24, paddingBottom: 8 },
   eyebrow: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.4 },
-  pageTitle: { marginTop: 5, color: colors.text, fontSize: 26, fontWeight: '700' },
+  pageTitle: { marginTop: 5, color: colors.text, fontSize: 28, fontWeight: '800' },
   pageSubtitle: { marginTop: 5, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  hero: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: radius.xxl, backgroundColor: colors.primary },
-  heroStat: { flex: 1, alignItems: 'center' },
-  heroValue: { color: colors.background, fontSize: 26, fontWeight: '900' },
-  heroLabel: { marginTop: 3, color: colors.primarySoft, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: .6 },
-  heroDivider: { width: 1, height: 34, backgroundColor: colors.primaryLight, opacity: 0.35 },
-  info: { padding: 16, borderRadius: radius.lg, backgroundColor: colors.primaryLight },
-  infoTitle: { color: colors.primary, fontSize: 13, fontWeight: '700' },
-  infoText: { marginTop: 5, color: colors.textMuted, fontSize: 12, lineHeight: 18 },
-  sectionTitle: { marginTop: 10, marginBottom: -4, color: colors.text, fontSize: 18, fontWeight: '700' },
+  info: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: colors.primaryLight },
+  infoIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.surface },
+  infoCopy: { flex: 1 },
+  infoTitle: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  infoText: { marginTop: 3, color: colors.textStrong, fontSize: 12, lineHeight: 18 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   state: { alignItems: 'center', gap: 10, paddingVertical: 40 },
-  stateText: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
-  stateRetry: { color: colors.primary, fontSize: 12, fontWeight: '800' },
-  list: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  card: { flexGrow: 1, flexBasis: 280, minWidth: 260, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', padding: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, backgroundColor: colors.surface },
-  pressed: { opacity: 0.7 },
-  icon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
-  iconText: { fontSize: 16, fontWeight: '700' },
-  copy: { flex: 1, marginHorizontal: 10 },
-  type: { color: colors.primary, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  title: { marginTop: 3, color: colors.textStrong, fontSize: 13, fontWeight: '700' },
-  detail: { marginTop: 3, color: colors.textMuted, fontSize: 11 },
-  chevron: { color: colors.textSoft, fontSize: 20 },
+  stateText: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
+  stateRetry: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  list: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
 });

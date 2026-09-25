@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
@@ -32,9 +32,15 @@ export function ClientCard({ client, caseCount, onPress, index = 0 }: ClientCard
             </View>
           </View>
           <View style={styles.typeRow}><Icon name={isCompany ? 'domain' : 'account-outline'} size={12} color={colors.textSoft} /><Text numberOfLines={1} style={styles.meta}>{isCompany ? 'Empresa' : 'Particular'} · NIF {client.nif || '—'}</Text></View>
-          <Text numberOfLines={1} style={styles.meta}>{contact}</Text>
+          <View style={styles.typeRow}><Icon name={client.phone ? 'phone-outline' : client.email ? 'email-outline' : 'alert-circle-outline'} size={12} color={colors.textSoft} /><Text numberOfLines={1} style={styles.meta}>{contact}</Text></View>
         </View>
-        <View style={styles.caseChip}><Text style={styles.caseChipText}>{caseCount}</Text><Text style={styles.caseChipLabel}>{caseCount === 1 ? 'Caso' : 'Casos'}</Text></View>
+        <View style={styles.side}>
+          <View style={styles.caseChip}><Text style={styles.caseChipText}>{caseCount}</Text><Text style={styles.caseChipLabel}>{caseCount === 1 ? 'Caso' : 'Casos'}</Text></View>
+          <View style={styles.quick}>
+            {client.phone ? <Pressable accessibilityRole="link" accessibilityLabel={`Ligar a ${client.name}`} hitSlop={6} onPress={() => Linking.openURL(`tel:${client.phone.replace(/\s/g, '')}`)} style={styles.quickButton}><Icon name="phone-outline" size={15} color={colors.primary} /></Pressable> : null}
+            {client.email ? <Pressable accessibilityRole="link" accessibilityLabel={`Enviar email a ${client.name}`} hitSlop={6} onPress={() => Linking.openURL(`mailto:${client.email}`)} style={styles.quickButton}><Icon name="email-outline" size={15} color={colors.primary} /></Pressable> : null}
+          </View>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -55,8 +61,11 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   statusDotInactive: { backgroundColor: colors.textSoft },
   statusText: { color: colors.successText, fontSize: 9, fontWeight: '800' },
   statusTextInactive: { color: colors.textMuted },
-  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
-  meta: { marginTop: 0, color: colors.textSoft, fontSize: 11 },
+  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
+  meta: { flexShrink: 1, color: colors.textSoft, fontSize: 12 },
+  side: { alignItems: 'center', gap: 8 },
+  quick: { flexDirection: 'row', gap: 6 },
+  quickButton: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill },
   caseChip: { alignItems: 'center', minWidth: 52, paddingHorizontal: 9, paddingVertical: 8, borderRadius: radius.lg, backgroundColor: colors.primaryLight },
   caseChipText: { color: colors.primary, fontSize: 15, fontWeight: '900' },
   caseChipLabel: { marginTop: 1, color: colors.primary, fontSize: 8, fontWeight: '800' },
