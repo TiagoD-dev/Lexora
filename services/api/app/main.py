@@ -8,8 +8,9 @@ from alembic import command
 from alembic.config import Config
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
+from sqlalchemy.exc import DataError
 from sqlalchemy.orm import Session
 
 from . import models
@@ -39,6 +40,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(DataError)
+async def data_too_long(request, exc):
+    # Postgres recusa texto maior que a coluna (o SQLite aceitava); é erro do pedido, não do servidor.
+    return JSONResponse(status_code=422, content={"detail": "Um dos campos excede o tamanho máximo permitido."})
+
 
 @app.middleware("http")
 async def private_portal_responses(request, call_next):
