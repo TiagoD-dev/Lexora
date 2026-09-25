@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { Icon } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import type { CaseTask } from '@/types/case';
@@ -28,7 +29,7 @@ export function TaskCard({ task, isLate, dateLabel, onToggle, onPress, onDelete,
       <View style={[styles.card, task.completed && styles.cardDone]}>
         <View style={[styles.accent, { backgroundColor: priority.fg }, task.completed && styles.accentDone]} />
         <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: task.completed }} accessibilityLabel={task.completed ? 'Marcar como pendente' : 'Marcar como concluída'} onPress={onToggle} style={[styles.check, task.completed && styles.checkDone]}>
-          <Text style={[styles.checkText, task.completed && styles.checkTextDone]}>{task.completed ? '✓' : ''}</Text>
+          {task.completed ? <Icon name="check" size={16} color={colors.white} /> : null}
         </Pressable>
         <Pressable onPress={onPress} style={styles.body}>
           <Text numberOfLines={1} style={[styles.title, task.completed && styles.titleDone]}>{task.title}</Text>
@@ -37,12 +38,12 @@ export function TaskCard({ task, isLate, dateLabel, onToggle, onPress, onDelete,
           <View style={styles.badges}>
             <View style={[styles.pill, { backgroundColor: priority.bg }]}><Text style={[styles.pillText, { color: priority.fg }]}>{task.priority}</Text></View>
             <View style={styles.pillNeutral}><Text style={styles.pillNeutralText}>{task.deadlineKind}</Text></View>
-            <Text style={[styles.date, isLate && styles.dateLate]}>{isLate ? '⚠ Em atraso · ' : ''}{dateLabel}</Text>
-            {task.recurrence !== 'Nenhuma' ? <Text style={styles.recurrence}>↻ {task.recurrence}</Text> : null}
-            {task.reminderDays.length ? <Text style={styles.reminder}>◉ {task.reminderDays.length}</Text> : null}
+            <Text style={[styles.date, isLate && styles.dateLate]}>{isLate ? 'Em atraso · ' : ''}{dateLabel}</Text>
+            {task.recurrence !== 'Nenhuma' ? <View style={styles.inlineMeta}><Icon name="repeat" size={11} color={colors.textSoft} /><Text style={styles.recurrence}>{task.recurrence}</Text></View> : null}
+            {task.reminderDays.length ? <View style={styles.inlineMeta}><Icon name="bell-outline" size={11} color={colors.accent} /><Text style={styles.reminder}>{task.reminderDays.length}</Text></View> : null}
           </View>
         </Pressable>
-        <Pressable accessibilityLabel="Eliminar tarefa" onPress={onDelete} style={styles.deleteButton}><Text style={styles.deleteText}>×</Text></Pressable>
+        <Pressable accessibilityLabel="Eliminar tarefa" onPress={onDelete} style={styles.deleteButton}><Icon name="close" size={18} color={colors.textSoft} /></Pressable>
       </View>
     </Animated.View>
   );
@@ -71,6 +72,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   date: { color: colors.textSoft, fontSize: 10, fontWeight: '600' },
   dateLate: { color: colors.danger, fontWeight: '800' },
   recurrence: { color: colors.primary, fontSize: 9, fontWeight: '700' },
+  inlineMeta: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   reminder: { color: colors.accent, fontSize: 9, fontWeight: '800' },
   deleteButton: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
   deleteText: { color: colors.textSoft, fontSize: 20, fontWeight: '700', lineHeight: 20 },

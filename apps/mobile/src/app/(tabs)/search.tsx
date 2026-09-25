@@ -77,7 +77,7 @@ export default function SearchScreen() {
         <Text style={styles.eyebrow}>PESQUISA</Text>
         <Text style={styles.title}>Pesquisa global</Text>
         <AppInput autoFocus accessibilityLabel="Pesquisar clientes, casos, documentos, notas e tarefas" value={query} onChangeText={setQuery} placeholder="Nome, processo ou palavras do conteúdo…" returnKeyType="search" />
-        {!normalizedQuery && <View style={styles.section}><EmptyState symbol="⌕" title="Encontra informação em toda a app" description="Pesquisa clientes, casos, documentos, notas e tarefas, incluindo o texto extraído dos documentos." /></View>}
+        {!normalizedQuery && <View style={styles.section}><EmptyState symbol="magnify" title="Encontra informação em toda a app" description="Pesquisa clientes, casos, documentos, notas e tarefas, incluindo o texto extraído dos documentos." /></View>}
         {!!normalizedQuery && <Text style={styles.summary}>{totalResults} {totalResults === 1 ? 'resultado' : 'resultados'}</Text>}
         {filteredClients.length > 0 && <View style={styles.section}>
           <Text style={styles.sectionTitle}>Clientes ({filteredClients.length})</Text>
@@ -101,7 +101,7 @@ export default function SearchScreen() {
             </Pressable>)}</View>
           </View>;
         })}
-        {!!normalizedQuery && totalResults === 0 && <View style={styles.section}><EmptyState symbol="⌕" title="Sem resultados" description="Tenta outro nome ou uma palavra do documento, nota ou tarefa." /></View>}
+        {!!normalizedQuery && totalResults === 0 && <View style={styles.section}><EmptyState symbol="magnify" title="Sem resultados" description="Tenta outro nome ou uma palavra do documento, nota ou tarefa." /></View>}
       </ScrollView>
     </SafeAreaView>
   );

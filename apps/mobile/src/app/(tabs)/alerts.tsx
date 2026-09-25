@@ -1,5 +1,6 @@
 import { Fragment } from 'react'; import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'; import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLegalUpdates } from '@/providers/legal-updates-provider'; import { useAppTheme } from '@/providers/theme-provider'; import { radius, type ThemeColors } from '@/theme'; import { hashTheme } from '@/utils/palette'; import type { LegalUpdate } from '@/types/legal-update';
+import { useLegalUpdates } from '@/providers/legal-updates-provider'; import { Icon, type IconName } from '@/components/icon';
+import { useAppTheme } from '@/providers/theme-provider'; import { radius, type ThemeColors } from '@/theme'; import { hashTheme } from '@/utils/palette'; import type { LegalUpdate } from '@/types/legal-update';
 
 const formatDate=(value:string|null)=>value?new Intl.DateTimeFormat('pt-PT',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(`${value}T12:00:00`)):'Fonte oficial';
 
@@ -11,7 +12,7 @@ export default function AlertsScreen(){
     {value:String(updates.filter((item)=>item.sourceKind==='União Europeia').length),label:'União Europeia'},
   ];
   return <SafeAreaView edges={['top']} style={styles.screen}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-    <View style={styles.intro}><View style={styles.introCopy}><Text style={styles.eyebrow}>MONITORIZAÇÃO</Text><Text style={styles.title}>Atualidade jurídica</Text><Text style={styles.subtitle}>Publicações oficiais nacionais, da União Europeia e jurisprudência de referência.</Text></View><Pressable accessibilityRole="button" onPress={refresh} style={styles.refresh}><Text style={styles.refreshText}>↻ Atualizar</Text></Pressable></View>
+    <View style={styles.intro}><View style={styles.introCopy}><Text style={styles.eyebrow}>MONITORIZAÇÃO</Text><Text style={styles.title}>Atualidade jurídica</Text><Text style={styles.subtitle}>Publicações oficiais nacionais, da União Europeia e jurisprudência de referência.</Text></View><Pressable accessibilityRole="button" onPress={refresh} style={styles.refresh}><Text style={styles.refreshText}>Atualizar</Text></Pressable></View>
     {hydrated&&updates.length>0?<View style={styles.hero}>{stats.map((stat,index)=><Fragment key={stat.label}>{index>0?<View style={styles.heroDivider}/>:null}<View style={styles.heroStat}><Text style={styles.heroValue}>{stat.value}</Text><Text style={styles.heroLabel}>{stat.label}</Text></View></Fragment>)}</View>:null}
     {!hydrated?<View style={styles.state}><ActivityIndicator color={colors.primary}/><Text style={styles.stateText}>A consultar fontes oficiais…</Text></View>
       :error?<View style={styles.state}><Text style={styles.stateText}>Não foi possível obter as publicações agora.</Text><Pressable onPress={refresh}><Text style={styles.stateRetry}>Tentar novamente</Text></Pressable></View>
@@ -30,7 +31,7 @@ function UpdateCard({update,colors,styles}:{update:LegalUpdate;colors:ThemeColor
       <Text numberOfLines={1} style={styles.summary}>{update.summary}</Text>
       <Text style={styles.date}>{formatDate(update.publishedAt)}</Text>
     </View>
-    <Text style={styles.chevron}>↗</Text>
+    <Icon name="open-in-new" size={16} color={colors.textSoft} />
   </Pressable>;
 }
 

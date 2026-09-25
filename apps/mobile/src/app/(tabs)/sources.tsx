@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppInput } from '@/components/app-input';
 import { useLegalUpdates } from '@/providers/legal-updates-provider';
+import { Icon, type IconName } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import { hashTheme } from '@/utils/palette';
@@ -72,13 +73,13 @@ export default function SourcesScreen() {
                   onPress={() => Linking.openURL(source.url)}
                   style={({ pressed }) => [styles.card, pressed && styles.pressed]}
                 >
-                  <View style={[styles.icon, { backgroundColor: icon.bg }]}><Text style={[styles.iconText, { color: icon.fg }]}>§</Text></View>
+                  <View style={[styles.icon, { backgroundColor: icon.bg }]}><Icon name="book-open-page-variant-outline" size={19} color={icon.fg} /></View>
                   <View style={styles.copy}>
                     <Text style={styles.type}>{type}</Text>
                     <Text numberOfLines={1} style={styles.title}>{source.title}</Text>
                     <Text numberOfLines={1} style={styles.detail}>{source.summary}</Text>
                   </View>
-                  <Text style={styles.chevron}>›</Text>
+                  <Icon name="chevron-right" size={20} color={colors.textSoft} />
                 </Pressable>
               );
             })}

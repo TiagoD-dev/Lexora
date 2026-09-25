@@ -140,7 +140,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 1.1,
   },
   drawerItem: { minHeight: 43, borderRadius: radius.md, marginHorizontal: 12, marginVertical: 1 },
-  drawerLabel: { marginLeft: -12, fontSize: 14, fontWeight: '600' },
+  drawerLabel: { marginLeft: -4, fontSize: 14, fontWeight: '600' },
   header: { backgroundColor: colors.background },
   headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
   sidebarNotice: {

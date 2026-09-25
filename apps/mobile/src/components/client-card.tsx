@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { Icon } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import type { Client } from '@/types/client';
@@ -30,7 +31,7 @@ export function ClientCard({ client, caseCount, onPress, index = 0 }: ClientCard
               <Text style={[styles.statusText, inactive && styles.statusTextInactive]}>{client.status}</Text>
             </View>
           </View>
-          <Text numberOfLines={1} style={styles.meta}>{isCompany ? '◇  Empresa' : '○  Particular'} · NIF {client.nif || '—'}</Text>
+          <View style={styles.typeRow}><Icon name={isCompany ? 'domain' : 'account-outline'} size={12} color={colors.textSoft} /><Text numberOfLines={1} style={styles.meta}>{isCompany ? 'Empresa' : 'Particular'} · NIF {client.nif || '—'}</Text></View>
           <Text numberOfLines={1} style={styles.meta}>{contact}</Text>
         </View>
         <View style={styles.caseChip}><Text style={styles.caseChipText}>{caseCount}</Text><Text style={styles.caseChipLabel}>{caseCount === 1 ? 'Caso' : 'Casos'}</Text></View>
@@ -54,7 +55,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   statusDotInactive: { backgroundColor: colors.textSoft },
   statusText: { color: colors.successText, fontSize: 9, fontWeight: '800' },
   statusTextInactive: { color: colors.textMuted },
-  meta: { marginTop: 5, color: colors.textSoft, fontSize: 11 },
+  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
+  meta: { marginTop: 0, color: colors.textSoft, fontSize: 11 },
   caseChip: { alignItems: 'center', minWidth: 52, paddingHorizontal: 9, paddingVertical: 8, borderRadius: radius.lg, backgroundColor: colors.primaryLight },
   caseChipText: { color: colors.primary, fontSize: 15, fontWeight: '900' },
   caseChipLabel: { marginTop: 1, color: colors.primary, fontSize: 8, fontWeight: '800' },

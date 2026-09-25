@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 
@@ -58,7 +59,7 @@ export function AuthShell({ eyebrow, title, description, children, footer }: Aut
   </KeyboardAvoidingView></SafeAreaView>;
 }
 
-function Promise({ title, text, styles }: { title: string; text: string; styles: ReturnType<typeof makeStyles> }) { return <View style={styles.promise}><View style={styles.promiseCheck}><Text style={styles.promiseCheckText}>✓</Text></View><View style={styles.promiseCopy}><Text style={styles.promiseTitle}>{title}</Text><Text style={styles.promiseText}>{text}</Text></View></View>; }
+function Promise({ title, text, styles }: { title: string; text: string; styles: ReturnType<typeof makeStyles> }) { const { colors } = useAppTheme(); return <View style={styles.promise}><View style={styles.promiseCheck}><Icon name="check" size={13} color={colors.primary} /></View><View style={styles.promiseCopy}><Text style={styles.promiseTitle}>{title}</Text><Text style={styles.promiseText}>{text}</Text></View></View>; }
 
 const makeStyles=(colors:ThemeColors)=>StyleSheet.create({
   screen:{flex:1,backgroundColor:colors.background},keyboard:{flex:1},scroll:{flexGrow:1},workspace:{width:'100%',maxWidth:1440,minHeight:'100%',alignSelf:'center',flexDirection:'row'},formPane:{flex:1,minWidth:0,backgroundColor:colors.background},formHeader:{minHeight:92,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:30},back:{flexDirection:'row',alignItems:'center',gap:7,paddingVertical:10},backText:{color:colors.primary,fontSize:25,lineHeight:25},backLabel:{color:colors.textMuted,fontSize:10,fontWeight:'700'},pressed:{opacity:.65},logoSurface:{width:174,height:50,overflow:'hidden',borderRadius:radius.md,backgroundColor:'#F7F4EB'},logoImage:{position:'absolute',top:-27,left:0,width:174,height:98},formContent:{width:'100%',maxWidth:540,alignSelf:'center',paddingHorizontal:30,paddingTop:46,paddingBottom:45},eyebrow:{color:colors.accent,fontSize:8,fontWeight:'900',letterSpacing:1.1},title:{marginTop:11,color:colors.text,fontSize:34,lineHeight:40,fontWeight:'900'},description:{maxWidth:480,marginTop:10,color:colors.textMuted,fontSize:12,lineHeight:19},form:{gap:15,marginTop:28},footer:{marginTop:23},privacy:{flexDirection:'row',gap:10,marginTop:28,paddingTop:20,borderTopWidth:1,borderTopColor:colors.border},privacyIcon:{color:colors.primary,fontSize:13},privacyText:{flex:1,color:colors.textSoft,fontSize:8,lineHeight:14},

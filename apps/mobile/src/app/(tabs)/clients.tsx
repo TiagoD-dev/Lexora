@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Icon, type IconName } from '@/components/icon';
 import { AppInput } from '@/components/app-input';
 import { ClientCard } from '@/components/client-card';
 import { EmptyState } from '@/components/empty-state';
@@ -46,7 +47,7 @@ export default function ClientsScreen() {
             <Text style={styles.title}>Clientes</Text>
             <Text style={styles.subtitle}>Contactos, Casos e informação organizada</Text>
           </View>
-          <Pressable accessibilityLabel="Criar novo cliente" onPress={() => router.push('/clients/new')} style={styles.add}><Text style={styles.addText}>＋</Text></Pressable>
+          <Pressable accessibilityLabel="Criar novo cliente" onPress={() => router.push('/clients/new')} style={styles.add}><Icon name="plus" size={24} color={colors.background} /></Pressable>
         </View>
 
         <View style={styles.hero}>
@@ -77,7 +78,7 @@ export default function ClientsScreen() {
             ))}
           </View>
         ) : (
-          <EmptyState symbol="◇" title="Nenhum cliente encontrado" description="Altera os filtros ou cria uma nova ficha de cliente." />
+          <EmptyState symbol="account-group-outline" title="Nenhum cliente encontrado" description="Altera os filtros ou cria uma nova ficha de cliente." />
         )}
       </ScrollView>
     </SafeAreaView>

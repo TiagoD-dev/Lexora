@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Icon, type IconName } from '@/components/icon';
 import { AppInput } from '@/components/app-input';
 import { CaseCard } from '@/components/case-card';
 import { EmptyState } from '@/components/empty-state';
@@ -21,14 +22,14 @@ export default function CasesScreen() {
   const visible = useMemo(() => { const q = query.trim().toLocaleLowerCase('pt-PT'); return cases.filter((item) => (status === 'Todos' || item.status === status) && (area === 'Todas' || item.area === area) && (court === 'Todos' || item.court === court) && (!q || `${item.title} ${item.client} ${item.area} ${item.court}`.toLocaleLowerCase('pt-PT').includes(q))); }, [area, cases, court, query, status]);
   const emAnalise = cases.filter((x) => x.status === 'Em análise').length; const concluidos = cases.filter((x) => x.status === 'Concluído').length;
   return <SafeAreaView edges={['top']} style={styles.screen}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-    <View style={styles.intro}><View><Text style={styles.eyebrow}>GESTÃO JURÍDICA</Text><Text style={styles.title}>Os meus casos</Text><Text style={styles.subtitle}>Casos, prazos e informação organizada por assunto</Text></View><Pressable accessibilityLabel="Criar novo caso" onPress={() => router.push('/cases/new')} style={styles.add}><Text style={styles.addText}>＋</Text></Pressable></View>
+    <View style={styles.intro}><View><Text style={styles.eyebrow}>GESTÃO JURÍDICA</Text><Text style={styles.title}>Os meus casos</Text><Text style={styles.subtitle}>Casos, prazos e informação organizada por assunto</Text></View><Pressable accessibilityLabel="Criar novo caso" onPress={() => router.push('/cases/new')} style={styles.add}><Icon name="plus" size={24} color={colors.background} /></Pressable></View>
     <View style={styles.hero}><HeroStat value={cases.length} label="Total" styles={styles} /><View style={styles.heroDivider} /><HeroStat value={emAnalise} label="Em análise" styles={styles} /><View style={styles.heroDivider} /><HeroStat value={concluidos} label="Concluídos" styles={styles} /></View>
     <OfflineBanner />
     <AppInput accessibilityLabel="Pesquisar casos" onChangeText={setQuery} placeholder="Pesquisar cliente, caso, área ou tribunal…" returnKeyType="search" value={query} />
     <FilterRow label="Estado" values={statuses} selected={status} onSelect={(value) => setStatus(value as Filter)} styles={styles} />
     <FilterRow label="Área" values={areas} selected={area} onSelect={setArea} styles={styles} />
     <FilterRow label="Tribunal" values={courts} selected={court} onSelect={setCourt} styles={styles} />
-    {!hydrated ? <View style={styles.skeletons}>{[1,2,3].map((n) => <View key={n} style={styles.skeleton} />)}</View> : visible.length ? <View style={styles.list}>{visible.map((item, index) => <CaseCard key={item.id} item={item} index={index} onPress={() => router.push({ pathname: '/cases/[id]', params: { id: item.id } })} />)}</View> : <EmptyState symbol="⌕" title="Nenhum caso encontrado" description="Altera os filtros ou cria um novo caso." />}
+    {!hydrated ? <View style={styles.skeletons}>{[1,2,3].map((n) => <View key={n} style={styles.skeleton} />)}</View> : visible.length ? <View style={styles.list}>{visible.map((item, index) => <CaseCard key={item.id} item={item} index={index} onPress={() => router.push({ pathname: '/cases/[id]', params: { id: item.id } })} />)}</View> : <EmptyState symbol="magnify" title="Nenhum caso encontrado" description="Altera os filtros ou cria um novo caso." />}
   </ScrollView></SafeAreaView>;
 }
 function FilterRow({ label, values, selected, onSelect, styles }: { label: string; values: string[]; selected: string; onSelect: (v: string) => void; styles: ReturnType<typeof makeStyles> }) { return <View><Text style={styles.filterLabel}>{label}</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>{values.map((v) => <Pressable key={v} onPress={() => onSelect(v)} style={[styles.filter, selected === v && styles.filterActive]}><Text numberOfLines={1} style={[styles.filterText, selected === v && styles.filterTextActive]}>{v}</Text></Pressable>)}</ScrollView></View>; }

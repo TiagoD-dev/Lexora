@@ -1,5 +1,6 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
+import { Icon, type IconName } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 
@@ -10,14 +11,14 @@ export function SelectField({ label, value, options, onChange }: { label: string
   return <View style={styles.wrap}>
     <Text style={styles.label}>{label}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} accessibilityState={{ expanded: open }} onPress={() => setOpen(true)} style={styles.control}>
-      <Text numberOfLines={1} style={styles.value}>{value}</Text><Text style={styles.chevron}>⌄</Text>
+      <Text numberOfLines={1} style={styles.value}>{value}</Text><Icon name="chevron-down" size={22} color={colors.primary} />
     </Pressable>
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
       <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
         <Pressable accessibilityViewIsModal style={styles.sheet} onPress={(event) => event.stopPropagation()}>
           <View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>{label}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Fechar ${label}`} style={styles.closeButton} onPress={() => setOpen(false)}><Text style={styles.close}>Fechar</Text></Pressable></View>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {options.map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: option === value }} accessibilityLabel={option} onPress={() => { onChange(option); setOpen(false); }} style={[styles.option, option === value && styles.optionActive]}><Text style={[styles.optionText, option === value && styles.optionTextActive]}>{option}</Text>{option === value && <Text style={styles.check}>✓</Text>}</Pressable>)}
+            {options.map((option) => <Pressable key={option} accessibilityRole="radio" accessibilityState={{ checked: option === value }} accessibilityLabel={option} onPress={() => { onChange(option); setOpen(false); }} style={[styles.option, option === value && styles.optionActive]}><Text style={[styles.optionText, option === value && styles.optionTextActive]}>{option}</Text>{option === value && <Icon name="check" size={18} color={colors.primary} />}</Pressable>)}
           </ScrollView>
         </Pressable>
       </Pressable>

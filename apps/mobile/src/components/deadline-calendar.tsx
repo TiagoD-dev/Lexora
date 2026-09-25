@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Icon, type IconName } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import { toLocalDate } from '@/utils/deadlines';
@@ -20,7 +21,7 @@ export function DeadlineCalendar({ tasks, selectedDate, onSelectDate }: { tasks:
   const label = new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numeric' }).format(month);
 
   return <View style={styles.card}>
-    <View style={styles.heading}><View><Text style={styles.eyebrow}>CALENDÁRIO DE PRAZOS</Text><Text style={styles.title}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text></View><View style={styles.controls}><Pressable accessibilityLabel="Mês anterior" onPress={() => move(-1)} style={styles.control}><Text style={styles.controlText}>‹</Text></Pressable><Pressable onPress={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1, 12)); onSelectDate(today); }} style={styles.todayButton}><Text style={styles.todayButtonText}>Hoje</Text></Pressable><Pressable accessibilityLabel="Mês seguinte" onPress={() => move(1)} style={styles.control}><Text style={styles.controlText}>›</Text></Pressable></View></View>
+    <View style={styles.heading}><View><Text style={styles.eyebrow}>CALENDÁRIO DE PRAZOS</Text><Text style={styles.title}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text></View><View style={styles.controls}><Pressable accessibilityLabel="Mês anterior" onPress={() => move(-1)} style={styles.control}><Text style={styles.controlText}>‹</Text></Pressable><Pressable onPress={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1, 12)); onSelectDate(today); }} style={styles.todayButton}><Text style={styles.todayButtonText}>Hoje</Text></Pressable><Pressable accessibilityLabel="Mês seguinte" onPress={() => move(1)} style={styles.control}><Icon name="chevron-right" size={20} color={colors.primary} /></Pressable></View></View>
     <View style={styles.grid}>{week.map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}{cells.map((day, index) => {
       if (!day) return <View key={`empty-${index}`} style={styles.day} />;
       const date = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; const count = counts[date]; const selected = selectedDate === date;

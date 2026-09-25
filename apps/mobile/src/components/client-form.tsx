@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
+import { Icon } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import type { ClientDraft, ClientStatus, ClientType } from '@/types/client';
@@ -23,7 +24,7 @@ export function ClientForm({ initial, submitLabel, onSubmit }: { initial?: Parti
       <View style={styles.heroCopy}>
         <Text numberOfLines={1} style={styles.heroName}>{value.name.trim() || 'Novo cliente'}</Text>
         <View style={styles.heroMetaRow}>
-          <Text style={styles.heroMeta}>{isCompany ? '◇ Empresa' : '○ Particular'}</Text>
+          <Text style={styles.heroMeta}>{isCompany ? 'Empresa' : 'Particular'}</Text>
           <View style={[styles.statusPill, value.status === 'Inativo' && styles.statusPillInactive]}>
             <View style={[styles.statusDot, value.status === 'Inativo' && styles.statusDotInactive]} />
             <Text style={[styles.statusText, value.status === 'Inativo' && styles.statusTextInactive]}>{value.status}</Text>
@@ -36,7 +37,7 @@ export function ClientForm({ initial, submitLabel, onSubmit }: { initial?: Parti
     <View style={styles.card}>
       <View style={styles.field}>
         <Text style={styles.label}>Tipo de cliente</Text>
-        <View style={styles.chips}>{types.map((type) => <Pressable key={type} onPress={() => set('type', type)} style={[styles.chip, value.type === type && styles.active]}><Text style={[styles.chipText, value.type === type && styles.activeText]}>{type === 'Empresa' ? '◇' : '○'} {type}</Text></Pressable>)}</View>
+        <View style={styles.chips}>{types.map((type) => <Pressable key={type} onPress={() => set('type', type)} style={[styles.chip, value.type === type && styles.active]}><Text style={[styles.chipText, value.type === type && styles.activeText]}>{type}</Text></Pressable>)}</View>
       </View>
       <View style={styles.field}>
         <Text style={styles.label}>Estado</Text>

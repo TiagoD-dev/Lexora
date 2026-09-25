@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
+import { Icon } from '@/components/icon';
 import { SelectField } from '@/components/select-field';
 import { LEGAL_AREAS } from '@/constants/legal-areas';
 import { useClients } from '@/providers/clients-provider';
@@ -32,7 +33,7 @@ export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial
 
   return <View style={styles.form}>
     <View style={styles.hero}>
-      <View style={[styles.icon, { backgroundColor: icon.bg }]}><Text style={[styles.iconText, { color: icon.fg }]}>§</Text></View>
+      <View style={[styles.icon, { backgroundColor: icon.bg }]}><Icon name="gavel" size={20} color={icon.fg} /></View>
       <View style={styles.heroCopy}>
         <Text numberOfLines={1} style={styles.heroName}>{value.title.trim() || 'Novo Caso'}</Text>
         <View style={styles.heroMetaRow}>

@@ -64,7 +64,7 @@ export default function DocumentsScreen() {
         <View style={styles.listHeading}><Text style={styles.sectionTitle}>{filterCaseId ? 'Documentos do Caso' : 'Todos os documentos'}</Text><View style={styles.count}><Text style={styles.countText}>{documents.length}</Text></View></View>
 
         {documents.length === 0 ? (
-          <EmptyState symbol="▤" title={filterCaseId ? 'Este Caso ainda não tem documentos' : 'Ainda não existem documentos'} description="Carrega o primeiro ficheiro para começares a extrair factos e entidades." />
+          <EmptyState symbol="folder-open-outline" title={filterCaseId ? 'Este Caso ainda não tem documentos' : 'Ainda não existem documentos'} description="Carrega o primeiro ficheiro para começares a extrair factos e entidades." />
         ) : (
           <View style={styles.grid}>
             {documents.map((document, index) => (
