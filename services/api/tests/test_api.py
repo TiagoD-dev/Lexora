@@ -136,7 +136,7 @@ def test_tasks_and_documents_are_persisted_in_case(client):
 def test_case_assistant_requires_auth_ownership_and_replies(client, monkeypatch):
     from app.routers import cases as cases_router
 
-    monkeypatch.setattr(cases_router, "_generate_assistant_reply", lambda prompt, case: f"Resposta simulada para: {prompt}")
+    monkeypatch.setattr(cases_router.assistant, "reply", lambda prompt, case, history: {"reply": f"Resposta simulada para: {prompt} ({len(history)} turnos)"})
 
     owner_token = register(client, "assistant-owner@example.com")
     other_token = register(client, "assistant-other@example.com")
@@ -147,6 +147,10 @@ def test_case_assistant_requires_auth_ownership_and_replies(client, monkeypatch)
 
     response = client.post("/cases/case-1/assistant", json={"prompt": "Resume os factos"}, headers=auth(owner_token))
     assert response.status_code == 200, response.text
+
+    history = [{"role": "user", "content": "Olá"}, {"role": "assistant", "content": "Olá!"}]
+    response = client.post("/cases/case-1/assistant", json={"prompt": "E agora?", "history": history}, headers=auth(owner_token))
+    assert response.json()["reply"] == "Resposta simulada para: E agora? (2 turnos)"
 
 
 def test_case_collaborators_can_view_and_edit_but_not_manage_collaborators(client):

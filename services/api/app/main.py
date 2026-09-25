@@ -147,6 +147,7 @@ async def extract_document(
     extension = Path(file.filename or "").suffix.lower()[:10]
     stored_name = f"{current_user.id}_{uuid4().hex}{extension}"
     (DOCUMENTS_DIR / stored_name).write_bytes(content)
+    (DOCUMENTS_DIR / f"{stored_name}.txt").write_text(text, encoding="utf-8")  # usado pelo assistente
     return {
         "text": text[:250_000],
         "characterCount": len(text),

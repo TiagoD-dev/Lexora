@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -133,12 +133,34 @@ class SimilarCaseOut(BaseModel):
     url: str = ""
 
 
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=20_000)
+
+
 class AssistantRequest(BaseModel):
     prompt: str = Field(min_length=1)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=40)
+
+
+class AssistantAction(BaseModel):
+    kind: Literal["task", "fact", "missing"]
+    title: str
+    dueDate: str | None = None
+    reason: str = ""
+
+
+class AssistantSource(BaseModel):
+    title: str
+    reference: str
+    url: str
+    excerpt: str
 
 
 class AssistantResponse(BaseModel):
     reply: str
+    actions: list[AssistantAction] = Field(default_factory=list)
+    sources: list[AssistantSource] = Field(default_factory=list)
 
 
 class CaseUpdate(BaseModel):

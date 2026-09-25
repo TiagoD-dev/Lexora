@@ -1,7 +1,7 @@
 export type CaseStatus = 'Rascunho' | 'Em análise' | 'Concluído' | 'Arquivado';
 export type CasePriority = 'Baixa' | 'Normal' | 'Alta' | 'Urgente';
 export type FactStatus = 'Por confirmar' | 'Confirmado' | 'Contestado';
-export type FactSource = 'Utilizador' | 'Documento' | 'Lexora';
+export type FactSource = 'Utilizador' | 'Documento' | 'Lexora' | 'Assistente';
 
 export type CaseEntity = {
   id: string;

@@ -1,16 +1,13 @@
 import json
 import logging
-import os
 import time
 from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from google import genai
-from google.genai import types as genai_types
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import assistant, llm, models, schemas
 from ..db import get_db
 from ..email import send_email
 from ..security import get_current_user
@@ -23,18 +20,6 @@ _STATUS_NOTICE = {
     "Em análise": "O seu processo encontra-se agora em análise pela nossa equipa.",
     "Concluído": "O seu processo foi concluído.",
 }
-
-ASSISTANT_DISCLAIMER = (
-    "Esta resposta organiza os dados do Caso; não substitui a validação das fontes "
-    "nem a análise de um profissional habilitado."
-)
-ASSISTANT_SYSTEM_INSTRUCTION = (
-    "És o assistente jurídico da Lexora. Respondes sempre em português de Portugal, "
-    "de forma curta e direta. Usas apenas o contexto do Caso fornecido em JSON — nunca "
-    "inventas factos, entidades ou documentos que não estejam nesse contexto. "
-    f"Termina sempre a resposta com este aviso, exatamente: \"{ASSISTANT_DISCLAIMER}\""
-)
-
 
 def _get_owned(db: Session, current_user: models.User, case_id: str) -> models.Case:
     """Loads a case accessible to current_user: the owner, or a collaborator by email."""
@@ -50,30 +35,6 @@ def _get_as_owner(db: Session, current_user: models.User, case_id: str) -> model
     if case.ownerId != current_user.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Apenas o dono do caso pode fazer isto.")
     return case
-
-
-def _generate_assistant_reply(prompt: str, case: models.Case) -> str:
-    context = {
-        "reference": case.reference,
-        "title": case.title,
-        "area": case.area,
-        "facts": case.facts,
-        "entities": case.entities,
-        "documents": case.documents,
-        "legalIssues": case.legalIssues,
-        "missingFacts": case.missingFacts,
-        "timeline": case.timeline,
-    }
-    client = genai.Client(
-        api_key=os.environ["GEMINI_API_KEY"],
-        http_options=genai_types.HttpOptions(retry_options=genai_types.HttpRetryOptions(attempts=3)),
-    )
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=f"Contexto do Caso (JSON):\n{json.dumps(context, ensure_ascii=False)}\n\nPergunta: {prompt}",
-        config=genai_types.GenerateContentConfig(system_instruction=ASSISTANT_SYSTEM_INSTRUCTION),
-    )
-    return response.text or ASSISTANT_DISCLAIMER
 
 
 SIMILAR_CASES_SYSTEM_INSTRUCTION = (
@@ -102,20 +63,8 @@ def _generate_similar_cases(case: models.Case) -> list[dict]:
         "description": case.description,
         "legalIssues": case.legalIssues,
     }
-    client = genai.Client(
-        api_key=os.environ["GEMINI_API_KEY"],
-        http_options=genai_types.HttpOptions(retry_options=genai_types.HttpRetryOptions(attempts=3)),
-    )
     try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=f"Caso (JSON):\n{json.dumps(context, ensure_ascii=False)}",
-            config=genai_types.GenerateContentConfig(
-                system_instruction=SIMILAR_CASES_SYSTEM_INSTRUCTION,
-                tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())],
-            ),
-        )
-        text = (response.text or "[]").strip()
+        text = (llm.generate(SIMILAR_CASES_SYSTEM_INSTRUCTION, f"Caso (JSON):\n{json.dumps(context, ensure_ascii=False)}", web_search=True) or "[]").strip()
         if text.startswith("```"):
             text = text.strip("`").removeprefix("json").strip()
         results = json.loads(text)
@@ -223,8 +172,7 @@ def delete_case(case_id: str, db: Session = Depends(get_db), current_user: model
 @router.post("/{case_id}/assistant", response_model=schemas.AssistantResponse)
 def ask_assistant(case_id: str, payload: schemas.AssistantRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     case = _get_owned(db, current_user, case_id)
-    reply = _generate_assistant_reply(payload.prompt, case)
-    return {"reply": reply}
+    return assistant.reply(payload.prompt, case, [turn.model_dump() for turn in payload.history])
 
 
 @router.post("/{case_id}/collaborators", response_model=schemas.CasePayload)
