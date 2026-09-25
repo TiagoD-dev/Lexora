@@ -2,14 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
-import { Choices, Copy, Panel, Row } from '@/components/business-preview';
+import { Choices, Copy, Row } from '@/components/business-preview';
+import { EmptyState } from '@/components/empty-state';
 import { PortalCaseView } from '@/components/portal-case';
-import { PortalError, PortalShell } from '@/components/portal-shell';
+import { Card, IconBox, PortalError, PortalShell } from '@/components/portal-shell';
+import { Text, View } from 'react-native';
+import { useAppTheme } from '@/providers/theme-provider';
 import { SelectField } from '@/components/select-field';
 import { portalRequest, type PortalOverview } from '@/services/portal-service';
 import { ApiError } from '@/services/api-client';
 
 export default function PortalPage() {
+  const { colors } = useAppTheme();
   const params = useLocalSearchParams<{ access?: string }>();
   const [accessId, setAccessId] = useState(typeof params.access === 'string' ? params.access : '');
   const [email, setEmail] = useState('');
@@ -46,7 +50,8 @@ export default function PortalPage() {
   const label = (item: PortalOverview['cases'][number]) => `${item.reference} · ${item.title} · ${item.id}`;
   return <PortalShell title={overview ? `Olá, ${overview.client.name}` : 'O teu escritório, mais perto'} subtitle={overview ? `${overview.office} · Acompanha os teus processos, documentos e mensagens.` : 'Entra com o acesso disponibilizado pelo teu advogado. Na primeira utilização, ativa o convite e define a tua palavra-passe.'}>
     <PortalError message={error} />
-    {!token || !overview ? <Panel title="Acesso do cliente">
+    {!token || !overview ? <Card highlight>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><IconBox icon="shield-lock-outline" /><View style={{ flex: 1 }}><Text accessibilityRole="header" style={{ color: colors.text, fontSize: 19, fontWeight: '800' }}>Acesso do cliente</Text><Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Ligação segura e privada ao teu escritório</Text></View></View>
       <Choices values={['Iniciar sessão', 'Ativar acesso']} value={mode} onChange={setMode} />
       <AppInput label="Identificador de acesso" value={accessId} onChangeText={setAccessId} autoCapitalize="none" autoCorrect={false} />
       <AppInput label="Email indicado ao escritório" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
@@ -58,13 +63,13 @@ export default function PortalPage() {
         generation.current += 1; setToken(result.accessToken); setOverview(data); setCaseId(data.cases[0]?.id ?? ''); setPassword(''); setCode(''); setMode('Iniciar sessão');
       })}>{busy ? 'A verificar…' : mode === 'Ativar acesso' ? 'Ativar e entrar' : 'Entrar no portal'}</AppButton>
       <Copy>Convite expirado ou palavra-passe esquecida? Pede um novo convite ao escritório. Por privacidade, volta a iniciar sessão se recarregares ou fechares esta página.</Copy>
-    </Panel> : <>
+    </Card> : <>
       <Row><AppButton disabled={busy} variant="ghost" onPress={() => void run(async () => { const data = await portalRequest<PortalOverview>('/me', token); setOverview(data); setCaseId(current => data.cases.some(item => item.id === current) ? current : data.cases[0]?.id ?? ''); })}>Atualizar portal</AppButton>
         <AppButton disabled={busy} variant="ghost" onPress={() => void run(async () => { try { await portalRequest('/logout', token, { method: 'POST' }); } finally { generation.current += 1; setToken(''); setOverview(null); setCaseId(''); } })}>Terminar sessão</AppButton></Row>
       {overview.cases.length ? <>
         <SelectField label="O teu processo" value={overview.cases.find(item => item.id === caseId) ? label(overview.cases.find(item => item.id === caseId)!) : 'Selecionar processo'} options={overview.cases.map(label)} onChange={value => setCaseId(overview.cases.find(item => label(item) === value)?.id ?? '')} />
         {caseId && <PortalCaseView key={`${token}:${caseId}`} caseId={caseId} token={token} onExpired={expired} />}
-      </> : <Panel title="Ainda não há processos publicados"><Copy>O escritório ainda não disponibilizou um processo neste portal. Volta a atualizar mais tarde ou contacta o teu advogado.</Copy></Panel>}
+      </> : <EmptyState symbol="folder-clock-outline" title="Ainda não há processos publicados" description="O escritório ainda não disponibilizou um processo neste portal. Volta a atualizar mais tarde ou contacta o teu advogado." />}
     </>}
   </PortalShell>;
 }
