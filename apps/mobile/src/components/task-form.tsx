@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
+import { DateField } from '@/components/date-field';
 import { SelectField } from '@/components/select-field';
 import { useCases } from '@/providers/cases-provider';
 import { useAppTheme } from '@/providers/theme-provider';
@@ -52,7 +53,7 @@ export function TaskForm({ initialCaseId, onSubmit }: { initialCaseId?: string; 
     <Text style={styles.sectionLabel}>PRAZO</Text>
     <View style={styles.card}>
       <View style={styles.twoColumns}><View style={styles.column}><SelectField label="Natureza do prazo" value={deadlineKind} options={DEADLINE_KINDS} onChange={(value) => setDeadlineKind(value as DeadlineKind)} /></View><View style={styles.column}><SelectField label="Recorrência" value={recurrence} options={RECURRENCE_RULES} onChange={(value) => setRecurrence(value as RecurrenceRule)} /></View></View>
-      <AppInput autoCapitalize="none" inputMode="numeric" label="Data limite" value={dueDate} onChangeText={setDueDate} placeholder="AAAA-MM-DD" />
+      <DateField label="Data limite" value={dueDate} onChange={setDueDate} />
       {!validation.valid ? <Text style={styles.error}>{validation.warnings[0]}</Text> : validation.warnings.length ? <View style={styles.warning}><Text style={styles.warningTitle}>Atenção ao calendário</Text>{validation.warnings.map((warning) => <Text key={warning} style={styles.warningText}>• {warning}</Text>)}{validation.suggestedDate ? <Pressable onPress={() => setDueDate(validation.suggestedDate!)}><Text style={styles.suggestion}>Usar o dia útil seguinte: {validation.suggestedDate}</Text></Pressable> : null}</View> : <Text style={styles.helper}>Formato AAAA-MM-DD. São verificados fins de semana e feriados nacionais portugueses.</Text>}
     </View>
 

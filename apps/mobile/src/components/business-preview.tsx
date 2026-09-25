@@ -36,10 +36,10 @@ export function Metrics({ items }: { items: { label: string; value: string }[] }
   </View>)}</Row>;
 }
 
-export function Choices<T extends string>({ values, value, onChange }: { values: readonly T[]; value: T; onChange: (value: T) => void }) {
+export function Choices<T extends string>({ values, value, onChange, counts }: { values: readonly T[]; value: T; onChange: (value: T) => void; counts?: Partial<Record<T, number>> }) {
   const { colors } = useAppTheme();
   return <Row>{values.map(option => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: option === value }} onPress={() => onChange(option)} style={[styles.choice, { backgroundColor: option === value ? colors.primaryLight : colors.surface, borderColor: option === value ? colors.primary : colors.border }]}>
-    <Text style={{ color: option === value ? colors.primary : colors.textMuted, fontSize: 14, fontWeight: '600' }}>{option}</Text>
+    <Text style={{ color: option === value ? colors.primary : colors.textMuted, fontSize: 14, fontWeight: '600' }}>{option}{counts?.[option] !== undefined ? <Text style={{ fontWeight: '900' }}>{`  ${counts[option]}`}</Text> : null}</Text>
   </Pressable>)}</Row>;
 }
 
@@ -48,10 +48,28 @@ export function Feedback({ children }: { children: string }) {
   return children ? <Text accessibilityLiveRegion="polite" style={[styles.notice, { color: colors.successText, backgroundColor: colors.successBackground, lineHeight: 21 }]}>{children}</Text> : null;
 }
 
-export const euros = (value: number) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
+/** Cartão de resumo bordô (mesmo estilo do Copilot na ficha do caso). */
+export function Hero({ label, value, caption, children }: { label: string; value: string; caption?: string; children?: ReactNode }) {
+  return <View style={styles.hero}>
+    <View style={styles.heroRing} />
+    <Text style={{ color: '#D9B454', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 }}>{label}</Text>
+    <Text style={{ color: '#F7F1E4', fontSize: 36, fontWeight: '900' }}>{value}</Text>
+    {caption ? <Text style={{ color: '#DDB0AC', fontSize: 13, lineHeight: 19 }}>{caption}</Text> : null}
+    {children}
+  </View>;
+}
+
+export function Stat({ label, value }: { label: string; value: string }) {
+  return <View style={styles.stat}><Text style={{ color: '#DDB0AC', fontSize: 11, fontWeight: '700' }}>{label}</Text><Text style={{ color: '#F7F1E4', fontSize: 17, fontWeight: '900' }}>{value}</Text></View>;
+}
+
+export const euros =(value: number) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
 const styles = StyleSheet.create({
   page: { padding: 20, paddingBottom: 48 }, content: { width: '100%', maxWidth: 1160, alignSelf: 'center', gap: 18 },
   panel: { borderWidth: 1, borderRadius: 18, padding: 20, gap: 14 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
   metric: { flexGrow: 1, flexBasis: 190, borderWidth: 1, borderRadius: 16, padding: 18, gap: 8 },
   choice: { minHeight: 44, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, paddingVertical: 12 }, notice: { padding: 14, borderRadius: 12 },
+  hero: { overflow: 'hidden', gap: 6, padding: 22, borderRadius: 20, backgroundColor: '#7A1620' },
+  heroRing: { position: 'absolute', top: -70, right: -60, width: 200, height: 200, borderWidth: 36, borderColor: '#5E1119', borderRadius: 100 },
+  stat: { flexGrow: 1, flexBasis: 120, gap: 2, padding: 12, borderRadius: 12, backgroundColor: '#5E1119' },
 });

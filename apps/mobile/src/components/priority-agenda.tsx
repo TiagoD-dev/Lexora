@@ -1,7 +1,7 @@
-import { createElement, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { DateField } from '@/components/date-field';
 import { Icon } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { parseLocalDate, toLocalDate, validateDeadline } from '@/utils/deadlines';
@@ -31,15 +31,14 @@ function displayDate(value?: string) {
   return date ? date.toLocaleDateString('pt-PT') : '';
 }
 export function PriorityAgenda({ cases, toggleTask, updateTask }: Props) {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const router = useRouter();
   const groups = buildAgenda(cases);
   const [selected, setSelected] = useState<AgendaItem | null>(null);
   const [dueDate, setDueDate] = useState('');
-  const [showPicker, setShowPicker] = useState(false);
   const validation = useMemo(() => selected ? validateDeadline(dueDate, selected.task.deadlineKind) : null, [dueDate, selected]);
   const canSave = !!dueDate && !!validation?.valid;
-  const close = () => { setSelected(null); setShowPicker(false); };
+  const close = () => { setSelected(null); };
   const save = () => { if (!selected || !canSave) return; updateTask(selected.caseId, selected.task.id, { dueDate }); close(); };
   const pending = groups.reduce((sum, group) => sum + group.items.length, 0);
   return <View style={styles.section}>
@@ -67,22 +66,7 @@ export function PriorityAgenda({ cases, toggleTask, updateTask }: Props) {
       <View style={styles.overlay}><View accessibilityViewIsModal style={[styles.modal, { backgroundColor: colors.surface }]}><ScrollView keyboardShouldPersistTaps="handled">
         <Text style={[styles.heading, { color: colors.textStrong }]}>Reagendar tarefa</Text><Text style={[styles.subtitle, { color: colors.textMuted }]}>{selected?.task.title}</Text>
         <Text style={[styles.label, { color: colors.textStrong }]}>Nova data</Text>
-        {Platform.OS === 'web'
-          ? createElement('input', {
-              type: 'date', value: dueDate, onChange: (event: { target: { value: string } }) => setDueDate(event.target.value),
-              style: { border: `1px solid ${colors.borderStrong}`, borderRadius: 10, height: 48, paddingLeft: 12, paddingRight: 12,
-                fontSize: 16, background: colors.surfaceMuted, color: colors.textStrong, colorScheme: isDark ? 'dark' : 'light',
-                width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' },
-            })
-          : Platform.OS === 'android' ? <>
-            <Pressable accessibilityRole="button" onPress={() => setShowPicker(true)} style={[styles.input, styles.dateButton, { borderColor: colors.borderStrong, backgroundColor: colors.surfaceMuted }]}>
-              <Text style={{ color: colors.textStrong, fontSize: 16 }}>{dueDate ? displayDate(dueDate) : 'Escolher data'}</Text>
-            </Pressable>
-            {showPicker && <DateTimePicker value={parseLocalDate(dueDate) ?? new Date()} mode="date" display="default"
-              onChange={(_event, date) => { setShowPicker(false); if (date) setDueDate(toLocalDate(date)); }} />}
-          </> : <DateTimePicker value={parseLocalDate(dueDate) ?? new Date()} mode="date" display="inline"
-            themeVariant={isDark ? 'dark' : 'light'} accentColor={colors.primary}
-            onChange={(_event, date) => { if (date) setDueDate(toLocalDate(date)); }} />}
+        <DateField value={dueDate} onChange={setDueDate} />
         {!canSave && <Text accessibilityRole="alert" style={[styles.warning, { color: colors.danger }]}>Introduz uma data válida no formato AAAA-MM-DD.</Text>}
         {validation?.warnings.map((warning, index) => <Text key={`${index}:${warning}`} accessibilityRole="alert" style={[styles.warning, { backgroundColor: colors.warningBackground, color: colors.warningText }]}>{warning}</Text>)}
         {validation?.suggestedDate && validation.suggestedDate !== dueDate && <Pressable accessibilityRole="button" onPress={() => setDueDate(validation.suggestedDate!)} style={[styles.button, { backgroundColor: colors.surfaceMuted, marginTop: 8 }]}><Text style={[styles.buttonText, { color: colors.textStrong }]}>Usar {displayDate(validation.suggestedDate)}</Text></Pressable>}
@@ -106,6 +90,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, button: { minHeight: 36, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 12, lineHeight: 16, fontWeight: '600' }, overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modal: { width: '100%', maxWidth: 460, maxHeight: '90%', padding: 20, borderRadius: 16 }, label: { fontSize: 14, fontWeight: '600', marginTop: 20, marginBottom: 8 },
-  input: { borderWidth: 1, borderRadius: 10, minHeight: 48, paddingHorizontal: 12, fontSize: 16 }, warning: { fontSize: 13, lineHeight: 20, marginTop: 8, padding: 8, borderRadius: 8 },
-  dateButton: { justifyContent: 'center' },
+  warning: { fontSize: 13, lineHeight: 20, marginTop: 8, padding: 8, borderRadius: 8 },
 });

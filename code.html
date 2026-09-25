@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html lang="pt"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;}body{overscroll-behavior-y:none;background-color:#fff8f6;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}#app-drawer-overlay{transition:opacity 0.28s ease,visibility 0.28s ease;}#app-drawer{transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);}body.drawer-open #app-drawer-overlay{opacity:1;visibility:visible;pointer-events:auto;}body.drawer-open #app-drawer{transform:translateX(0);}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "error-container": "#ffdad6", "on-tertiary": "#ffffff", "primary-fixed-dim": "#ffb3b2", "on-surface": "#271815", "inverse-surface": "#3e2c29", "on-tertiary-container": "#b9a695", "surface": "#fff8f6", "tertiary-fixed": "#f4dfcc", "secondary-fixed": "#ffdea7", "primary": "#59000e", "on-secondary-container": "#765400", "background": "#fff8f6", "tertiary": "#32261a", "on-primary-fixed-variant": "#862028", "secondary-fixed-dim": "#f2be5d", "on-tertiary-fixed-variant": "#524437", "error": "#ba1a1a", "on-tertiary-fixed": "#241a0e", "on-error-container": "#93000a", "surface-dim": "#f1d4ce", "surface-variant": "#f9dcd6", "surface-container-low": "#fff0ee", "on-secondary": "#ffffff", "outline-variant": "#debfbe", "surface-container-highest": "#f9dcd6", "on-background": "#271815", "on-secondary-fixed-variant": "#5e4200", "surface-container-high": "#ffe2dc", "surface-container": "#ffe9e5", "on-surface-variant": "#574141", "on-primary": "#ffffff", "primary-container": "#7a1620", "secondary-container": "#fec967", "on-error": "#ffffff", "surface-tint": "#a6373d", "surface-container-lowest": "#ffffff", "surface-bright": "#fff8f6", "secondary": "#7c5800", "outline": "#8a7170", "primary-fixed": "#ffdad8", "tertiary-container": "#493c2f", "on-secondary-fixed": "#271900", "on-primary-container": "#ff8586", "inverse-on-surface": "#ffede9", "tertiary-fixed-dim": "#d7c3b1", "on-primary-fixed": "#410008", "inverse-primary": "#ffb3b2" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-sm": "0.5rem", "gutter-mobile": "1rem", "space-lg": "1.5rem", "space-md": "1rem", "margin": "2rem", "margin-mobile": "1rem", "space-xs": "0.25rem", "space-xl": "2.25rem", "gutter": "1.5rem" }, fontFamily: { "headline-md": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "headline-xl-mobile": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "display-lg": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-xl": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"] }, fontSize: { "headline-md": ["1.375rem", { "lineHeight": "1.875rem", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-md": ["0.9375rem", { "lineHeight": "1.5rem", "letterSpacing": "0em", "fontWeight": "400" }], "headline-sm": ["1.125rem", { "lineHeight": "1.625rem", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-sm": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.06em", "fontWeight": "700" }], "headline-xl-mobile": ["1.75rem", { "lineHeight": "2.25rem", "letterSpacing": "-0.02em", "fontWeight": "600" }], "headline-lg": ["1.75rem", { "lineHeight": "2.25rem", "letterSpacing": "-0.02em", "fontWeight": "600" }], "display-lg": ["3rem", { "lineHeight": "3.5rem", "letterSpacing": "-0.03em", "fontWeight": "700" }], "label-md": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.03em", "fontWeight": "600" }], "body-lg": ["1.125rem", { "lineHeight": "1.75rem", "letterSpacing": "-0.005em", "fontWeight": "400" }], "label-lg": ["0.875rem", { "lineHeight": "1.25rem", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-xl": ["2.25rem", { "lineHeight": "2.75rem", "letterSpacing": "-0.025em", "fontWeight": "600" }], "body-sm": ["0.8125rem", { "lineHeight": "1.25rem", "letterSpacing": "0.005em", "fontWeight": "400" }] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen flex flex-col relative selection:bg-secondary-container selection:text-on-secondary-fixed"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/90 backdrop-blur-xl shadow-[0_1px_12px_rgba(39,24,21,0.06)]"><div class="h-16 px-gutter-mobile flex items-center justify-between"><button aria-label="Abrir Menu de Navegação" class="w-11 h-11 flex items-center justify-center rounded-lg text-primary hover:bg-surface-container transition-colors active:scale-95 touch-manipulation" onclick="document.body.classList.add('drawer-open')" type="button"><span class="material-symbols-outlined text-2xl">menu</span></button><div class="flex flex-col items-center justify-center pointer-events-none"><span class="font-headline-sm text-headline-sm tracking-tight text-primary font-bold">LEXORA</span><span class="font-label-sm text-[9px] tracking-[0.2em] text-secondary font-semibold uppercase -mt-1">Direito Digital</span></div><div class="flex items-center gap-space-sm"><div class="relative p-0.5 rounded-full bg-gradient-to-tr from-secondary to-secondary-container shadow-[0_2px_6px_rgba(124,88,0,0.18)]"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1Xepe2kVr8wF87V3QFDaA5-18Jf6LA7alfB8kdaIvHRd7rS0Oye3KuPn55foFr2Bo5EEaDZnjsrbfrlQaeLzypLCXV1hsbxAQlRArxlP5j91M_8LLi2GZ6UabNr4FM4VGBrWoiE6b96dVVqUaXPsaT_MD_O4o-4Mwcg_MQA10ng1fS09NUGfF5NXBa1xkEdX_cgnkLksgTTbANxJkR1mzpZ1AGv0Gk8Y5-NPBCSXLadd-AS6FrQt0tFBOg"/></div></div></div></header><div class="fixed inset-0 z-50 bg-inverse-surface/60 backdrop-blur-sm opacity-0 invisible pointer-events-none transition-all duration-300" id="app-drawer-overlay" onclick="document.body.classList.remove('drawer-open')"></div><aside class="fixed top-0 left-0 bottom-0 z-50 w-[84%] max-w-[340px] bg-surface-container-lowest shadow-[0_16px_40px_rgba(39,24,21,0.22)] -translate-x-full flex flex-col overflow-hidden" id="app-drawer"><div class="p-space-lg pt-safe bg-surface-container flex items-start justify-between"><div class="flex items-center gap-space-md"><div class="p-0.5 rounded-full bg-gradient-to-tr from-secondary to-secondary-container"><img alt="Dr. Miguel Soares" class="w-12 h-12 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1Xepe2kVr8wF87V3QFDaA5-18Jf6LA7alfB8kdaIvHRd7rS0Oye3KuPn55foFr2Bo5EEaDZnjsrbfrlQaeLzypLCXV1hsbxAQlRArxlP5j91M_8LLi2GZ6UabNr4FM4VGBrWoiE6b96dVVqUaXPsaT_MD_O4o-4Mwcg_MQA10ng1fS09NUGfF5NXBa1xkEdX_cgnkLksgTTbANxJkR1mzpZ1AGv0Gk8Y5-NPBCSXLadd-AS6FrQt0tFBOg"/></div><div class="flex flex-col"><h2 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Dr. Miguel Soares</h2><span class="font-label-md text-label-md text-secondary font-bold tracking-wide mt-0.5">Cédula OA 48219L</span><span class="font-body-sm text-body-sm text-on-surface-variant">Soares & Associados</span></div></div><button aria-label="Fechar menu" class="w-9 h-9 -mr-2 -mt-1 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-primary transition-colors" onclick="document.body.classList.remove('drawer-open')" type="button"><span class="material-symbols-outlined text-xl">close</span></button></div><nav class="flex-1 overflow-y-auto px-gutter-mobile py-space-md space-y-1" data-active-classes="bg-surface-container text-primary font-bold"><div class="px-space-sm py-1 font-label-sm text-label-sm uppercase tracking-widest text-outline">Operacional</div><a aria-current="page" class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg transition-colors bg-surface-container text-primary font-bold" data-path="hoje" href="#"><span class="material-symbols-outlined text-xl text-primary">calendar_today</span><span class="font-label-lg text-label-lg">Hoje (Visão Geral)</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="clientes" href="#"><span class="material-symbols-outlined text-xl text-primary">group</span><span class="font-label-lg text-label-lg">Clientes & Ficheiro</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="casos" href="#"><span class="material-symbols-outlined text-xl text-primary">gavel</span><span class="font-label-lg text-label-lg">Casos & Processos</span></a><a class="flex items-center justify-between px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="tarefas-prazos" href="#"><div class="flex items-center gap-space-md"><span class="material-symbols-outlined text-xl text-primary">event_available</span><span class="font-label-lg text-label-lg">Tarefas & Prazos</span></div><span class="bg-error-container text-on-error-container text-[11px] font-bold px-2 py-0.5 rounded-full">3</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="documentos-pecas" href="#"><span class="material-symbols-outlined text-xl text-primary">folder_open</span><span class="font-label-lg text-label-lg">Documentos & Peças</span></a><div class="pt-space-md px-space-sm py-1 font-label-sm text-label-sm uppercase tracking-widest text-outline">Inteligência & Doutrina</div><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg bg-surface-container-high/60 text-primary-container font-semibold hover:bg-surface-container-high transition-colors" data-path="assistente-ia" href="#"><span class="material-symbols-outlined text-xl text-secondary">neurology</span><span class="font-label-lg text-label-lg">Assistente Lexora IA</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="fontes-oficiais" href="#"><span class="material-symbols-outlined text-xl text-primary">menu_book</span><span class="font-label-lg text-label-lg">Fontes Oficiais (DRE/DGSI)</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="atualidade-juridica" href="#"><span class="material-symbols-outlined text-xl text-primary">article</span><span class="font-label-lg text-label-lg">Atualidade Jurídica</span></a><div class="pt-space-md px-space-sm py-1 font-label-sm text-label-sm uppercase tracking-widest text-outline">Gestão</div><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="definicoes-perfil" href="#"><span class="material-symbols-outlined text-xl text-primary">settings</span><span class="font-label-lg text-label-lg">Definições & Perfil</span></a><a class="flex items-center gap-space-md px-space-md py-2.5 rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" data-path="planos-faturacao" href="#"><span class="material-symbols-outlined text-xl text-primary">account_balance_wallet</span><span class="font-label-lg text-label-lg">Planos & Faturação</span></a></nav><div class="p-space-md pb-safe bg-surface-container-low flex items-center justify-between"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant font-bold">Lexora Pro Escritório</span><span class="font-label-sm text-[10px] text-outline">Plano Institucional Activo</span></div><span class="material-symbols-outlined text-secondary">verified</span></div></aside><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full px-gutter-mobile space-y-space-lg pb-space-xl">
+<!-- Saudação e Cabeçalho Matinal -->
+<section class="flex flex-col pt-space-sm space-y-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-widest font-semibold flex items-center gap-1.5">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-secondary"></span>
+        Terça-feira, 24 de Outubro
+      </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-sm text-secondary" style="font-variation-settings: 'FILL' 1;">balance</span>
+        Tribunais Ativos
+      </span>
+</div>
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface font-semibold tracking-tight">
+      Bom dia, <span class="text-primary font-bold">Dr. Miguel</span>
+</h1>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-base text-primary">notification_important</span>
+<p class="font-body-sm text-body-sm">
+<strong class="text-on-surface font-semibold">3 prazos judiciais críticos</strong> requerem a sua validação esta semana.
+      </p>
+</div>
+</section>
+<!-- Cartão de Alerta Crítico (Prazo Peremptório 48h) -->
+<section class="relative overflow-hidden rounded-xl bg-error-container text-on-error-container p-space-md shadow-sm">
+<div class="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-error/10 pointer-events-none"></div>
+<div class="flex items-start gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center shrink-0 shadow-sm text-error">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">timer</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1 space-y-1">
+<div class="flex items-center justify-between gap-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container-lowest text-error font-bold uppercase tracking-wider">
+            Prazo Peremptório • 48h
+          </span>
+<span class="font-label-sm text-label-sm text-on-error-container/80 font-medium">Tribunal Relação Porto</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm text-on-error-container font-bold leading-snug">
+          Recurso de Apelação c/ Efeito Suspensivo
+        </h2>
+<p class="font-body-sm text-body-sm text-on-error-container/90">
+          Processo <span class="font-semibold text-error">1420/22.4T8PRT</span> • Réu: Sociedade Vitivinícola do Douro, S.A.
+        </p>
+</div>
+</div>
+<!-- Barra de Progresso Táctil do Prazo -->
+<div class="mt-3.5 pt-3 bg-surface-container-lowest/50 rounded-lg p-2.5 flex flex-col gap-1.5">
+<div class="flex justify-between items-center text-on-error-container font-label-sm text-label-sm">
+<span>Tempo Decorrido (Art.º 638.º CPC)</span>
+<strong class="text-error font-bold">46h restantes</strong>
+</div>
+<div class="w-full h-1.5 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full w-[82%]"></div>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-end gap-2">
+<button class="w-full py-2.5 px-space-md rounded-lg bg-primary text-on-primary font-label-lg text-label-lg font-semibold flex items-center justify-center gap-2 shadow-sm hover:opacity-95 active:scale-[0.98] transition-all touch-manipulation" type="button">
+<span>Examinar Minuta & Guias</span>
+<span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Ações Rápidas de Chancelaria -->
+<section class="space-y-space-xs">
+<div class="flex items-center justify-between px-0.5">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant font-bold uppercase tracking-widest">
+        Ações Rápidas de Chancelaria
+      </h3>
+<span class="font-label-sm text-label-sm text-secondary">Acesso Direto</span>
+</div>
+<div class="grid grid-cols-3 gap-2.5">
+<!-- Novo Caso -->
+<button class="flex flex-col items-center justify-center p-3 rounded-xl bg-surface-container-lowest shadow-sm hover:bg-surface-container-low transition-all active:scale-95 text-center group" type="button">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:scale-105 transition-transform mb-2">
+<span class="material-symbols-outlined text-2xl">create_new_folder</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Novo Caso</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant mt-0.5">Criar pasta</span>
+</button>
+<!-- Novo Cliente -->
+<button class="flex flex-col items-center justify-center p-3 rounded-xl bg-surface-container-lowest shadow-sm hover:bg-surface-container-low transition-all active:scale-95 text-center group" type="button">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:scale-105 transition-transform mb-2">
+<span class="material-symbols-outlined text-2xl">person_add</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Cliente</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant mt-0.5">Ficha & NIF</span>
+</button>
+<!-- Consultar Lexora IA -->
+<button class="flex flex-col items-center justify-center p-3 rounded-xl bg-secondary text-on-secondary shadow-md hover:opacity-95 transition-all active:scale-95 text-center relative overflow-hidden group" type="button">
+<div class="absolute -right-3 -top-3 w-10 h-10 bg-secondary-container/40 rounded-full blur-sm"></div>
+<div class="w-10 h-10 rounded-lg bg-secondary-container flex items-center justify-center text-on-secondary-container group-hover:scale-105 transition-transform mb-2 shadow-sm">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">neurology</span>
+</div>
+<span class="font-label-md text-label-md text-on-secondary font-bold">Lexora IA</span>
+<span class="font-label-sm text-[10px] text-secondary-fixed mt-0.5 font-medium">Parecer Instantâneo</span>
+</button>
+</div>
+</section>
+<!-- Prazos Próximos da Semana -->
+<section class="space-y-space-sm">
+<div class="flex items-center justify-between px-0.5">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">event_upcoming</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Prazos & Diligências</h3>
+</div>
+<a class="font-label-md text-label-md text-primary font-bold hover:underline" href="#">Ver agenda (8)</a>
+</div>
+<div class="flex flex-col space-y-2.5">
+<!-- Prazo 1: Hoje -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col space-y-2 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
+<div class="flex items-center justify-between gap-2">
+<span class="px-2 py-0.5 rounded font-label-sm text-label-sm bg-error-container text-on-error-container font-bold uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">alarm</span> Hoje 23:59
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Proc. 892/23.1T8LSB</span>
+</div>
+<div>
+<h4 class="font-label-lg text-label-lg text-on-surface font-bold">Contestação e Rol de Testemunhas</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Pinto & Filhos, Lda. c/ Autoridade Tributária</p>
+</div>
+<div class="pt-2 flex items-center justify-between bg-surface-container-low rounded-lg px-2.5 py-1.5">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-primary">attach_file</span> 3 peças anexas
+          </span>
+<button class="font-label-sm text-label-sm font-bold text-primary flex items-center gap-0.5 hover:text-primary-container" type="button">
+<span>Submeter Citius</span>
+<span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Prazo 2: Amanhã -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col space-y-2 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="flex items-center justify-between gap-2">
+<span class="px-2 py-0.5 rounded font-label-sm text-label-sm bg-secondary-container text-on-secondary-fixed font-bold uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">schedule</span> Amanhã 17:00
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Proc. 310/21.0T8MTS</span>
+</div>
+<div>
+<h4 class="font-label-lg text-label-lg text-on-surface font-bold">Requerimento Probatório Pericial</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Inventário Partilhas • Herança Ferreira</p>
+</div>
+<div class="pt-2 flex items-center justify-between bg-surface-container-low rounded-lg px-2.5 py-1.5">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-secondary">verified_user</span> Procuração Válida
+          </span>
+<button class="font-label-sm text-label-sm font-bold text-secondary flex items-center gap-0.5" type="button">
+<span>Rever Minuta</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Prazo 3: 27 Out -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm flex flex-col space-y-2 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-outline-variant"></div>
+<div class="flex items-center justify-between gap-2">
+<span class="px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container-high text-on-surface font-bold uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">event</span> 27 Out (Sexta)
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Proc. 4501/20.8T8VNG</span>
+</div>
+<div>
+<h4 class="font-label-lg text-label-lg text-on-surface font-bold">Alegações Finais de Facto e de Direito</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Silva vs. Banco Atlântico Europeu</p>
+</div>
+<div class="pt-2 flex items-center justify-between bg-surface-container-low rounded-lg px-2.5 py-1.5">
+<span class="font-label-sm text-label-sm text-outline font-medium">Estado: Rascunho 80%</span>
+<span class="font-label-sm text-label-sm font-bold text-primary">Editar</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Casos Ativos com Destaque de IA Legal -->
+<section class="space-y-space-sm">
+<div class="flex items-center justify-between px-0.5">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">gavel</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Casos em Destaque</h3>
+</div>
+<a class="font-label-md text-label-md text-secondary font-bold hover:underline" href="#">Ver Todos (34)</a>
+</div>
+<!-- Card Caso 1 -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm space-y-3">
+<div class="flex items-start justify-between">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5">
+<span class="px-1.5 py-0.5 rounded font-label-sm text-[10px] bg-surface-container text-on-surface-variant font-bold uppercase">
+              Direito Comercial
+            </span>
+<span class="font-label-sm text-label-sm text-outline">Comarca de Lisboa</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-on-surface font-bold leading-tight">
+            Fusão Transfronteiriça Iberian Logistics S.A.
+          </h4>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Proc. 2091/23.4TYLSB</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-lg">folder_shared</span>
+</div>
+</div>
+<!-- Badge de IA Assistente -->
+<div class="flex items-center justify-between bg-surface-container-low p-2.5 rounded-lg">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-secondary-container flex items-center justify-center text-on-secondary-fixed">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">
+            2 sugestões de cláusulas de garantia disponíveis
+          </span>
+</div>
+<span class="material-symbols-outlined text-primary text-lg">chevron_right</span>
+</div>
+</div>
+<!-- Card Caso 2 -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm space-y-3">
+<div class="flex items-start justify-between">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5">
+<span class="px-1.5 py-0.5 rounded font-label-sm text-[10px] bg-surface-container text-on-surface-variant font-bold uppercase">
+              Direito do Trabalho
+            </span>
+<span class="font-label-sm text-label-sm text-outline">Juízo do Trabalho Porto</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-on-surface font-bold leading-tight">
+            Impugnação de Despedimento Coletivo
+          </h4>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Proc. 784/22.1T8PRT</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-lg">work</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Aguarda Despacho Saneador
+        </span>
+<span class="text-outline">Juiz 3 • Sessão a designar</span>
+</div>
+</div>
+</section>
+<!-- Dossier Visual & Métricas de Atividade -->
+<section class="rounded-xl bg-surface-container p-space-md space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">insights</span>
+<h3 class="font-label-lg text-label-lg text-on-surface font-bold">Produtividade Forense</h3>
+</div>
+<span class="font-label-sm text-label-sm text-outline">Outubro 2023</span>
+</div>
+<div class="grid grid-cols-2 gap-2.5">
+<div class="p-3 bg-surface-container-lowest rounded-lg shadow-sm flex flex-col justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Peças Produzidas</span>
+<div class="flex items-baseline gap-1.5 mt-2">
+<span class="font-headline-lg text-headline-lg text-primary font-bold">28</span>
+<span class="font-label-sm text-[11px] text-secondary font-bold">+12% mês</span>
+</div>
+<!-- Mini sparkline bar visual -->
+<div class="flex items-end gap-1 h-5 mt-2">
+<div class="flex-1 bg-surface-container-high rounded-t h-2"></div>
+<div class="flex-1 bg-surface-container-high rounded-t h-3"></div>
+<div class="flex-1 bg-surface-container-high rounded-t h-2.5"></div>
+<div class="flex-1 bg-primary rounded-t h-5"></div>
+</div>
+</div>
+<div class="p-3 bg-surface-container-lowest rounded-lg shadow-sm flex flex-col justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Taxa de Sucesso</span>
+<div class="flex items-baseline gap-1.5 mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold">94%</span>
+<span class="font-label-sm text-[11px] text-secondary font-bold">Estável</span>
+</div>
+<!-- Progress bar minimal -->
+<div class="w-full bg-surface-container-high h-2 rounded-full mt-3 overflow-hidden">
+<div class="bg-secondary h-full rounded-full w-[94%]"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Biblioteca & Atualidade Jurídica (Feed DGSI/STJ) -->
+<section class="space-y-space-xs">
+<div class="flex items-center justify-between px-0.5">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-xl">menu_book</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Atualidade & Doutrina</h3>
+</div>
+<span class="font-label-sm text-label-sm text-outline">DGSI / DRE</span>
+</div>
+<!-- Artigo Recente de Jurisprudência -->
+<article class="p-space-md rounded-xl bg-surface-container-lowest shadow-sm space-y-2">
+<div class="flex items-center justify-between text-outline font-label-sm text-label-sm">
+<span class="font-bold text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">verified</span> STJ • Supremo Tribunal
+        </span>
+<span>Publicado há 2 horas</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-on-surface font-bold leading-snug">
+        Uniformização de Jurisprudência: Cláusulas de indemnização e lucros cessantes em contratos bancários
+      </h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+        O Pleno das Secções Cíveis fixou doutrina vinculativa quanto aos limites do art.º 811.º do Código Civil em litígios de crédito corporativo.
+      </p>
+<div class="pt-1.5 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">
+          Acórdão n.º 9/2023
+        </span>
+<button class="font-label-sm text-label-sm font-bold text-primary flex items-center gap-1 hover:underline" type="button">
+<span>Guardar no Dossier</span>
+<span class="material-symbols-outlined text-base">bookmark_add</span>
+</button>
+</div>
+</article>
+</section>
+</div>
+<script>
+  // Micro-interatividade para feedback tátil nos atalhos rápidos
+  document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      if (!this.classList.contains('pointer-events-none')) {
+        this.style.transform = 'scale(0.97)';
+        setTimeout(() => {
+          this.style.transform = '';
+        }, 120);
+      }
+    });
+  });
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-2px_14px_rgba(39,24,21,0.05)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16 px-gutter-mobile max-w-lg mx-auto"><a aria-current="page" class="flex flex-col items-center justify-center gap-1 w-16 h-14 transition-all active:scale-95 text-primary font-bold" data-path="hoje" href="#"><span class="material-symbols-outlined text-2xl">dashboard</span><span class="font-label-sm text-[11px]">Hoje</span></a><a class="flex flex-col items-center justify-center gap-1 w-16 h-14 text-on-surface-variant hover:text-primary transition-all active:scale-95" data-path="casos" href="#"><span class="material-symbols-outlined text-2xl">gavel</span><span class="font-label-sm text-[11px]">Casos</span></a><a class="flex flex-col items-center justify-center gap-1 w-16 h-14 text-on-surface-variant hover:text-primary transition-all active:scale-95 relative" data-path="tarefas-prazos" href="#"><span class="material-symbols-outlined text-2xl">calendar_month</span><span class="font-label-sm text-[11px]">Tarefas</span><span class="absolute top-1 right-3.5 w-2.5 h-2.5 rounded-full bg-primary-container ring-2 ring-surface"></span></a><a class="flex flex-col items-center justify-center gap-1 w-16 h-14 text-on-surface-variant hover:text-primary transition-all active:scale-95" data-path="assistente-ia" href="#"><div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-fixed shadow-[0_2px_6px_rgba(124,88,0,0.2)]"><span class="material-symbols-outlined text-xl">smart_toy</span></div><span class="font-label-sm text-[10px] text-secondary font-bold -mt-0.5">IA Legal</span></a></div></nav></body></html>

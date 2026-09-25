@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { AppButton } from './app-button';
 import { AppInput } from './app-input';
+import { DateField } from './date-field';
 import { Choices, Copy, euros, Feedback, Panel, Row } from './business-preview';
 import { PortalError } from './portal-shell';
 import { downloadPortalDocument, portalRequest, uploadPortalDocument, type PortalDetail } from '@/services/portal-service';
@@ -95,7 +96,7 @@ export function PortalCaseView({ caseId, token, onExpired }: { caseId: string; t
         {office && <Panel title="Adicionar valor a pagamento">
           <AppInput label="Descrição" value={chargeText} onChangeText={setChargeText} maxLength={10000} />
           <AppInput label="Valor total a pagar (€), incluindo impostos aplicáveis" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-          <AppInput label="Data limite (AAAA-MM-DD), opcional" value={dueDate} onChangeText={setDueDate} maxLength={10} />
+          <DateField label="Data limite, opcional" value={dueDate} onChange={setDueDate} />
           <AppInput label="Instruções de pagamento / referência" multiline value={instructions} onChangeText={setInstructions} maxLength={2000} />
           <Copy>Este registo não emite uma fatura. Partilha o documento de faturação na secção Documentos.</Copy>
           <AppButton disabled={busy || !chargeText.trim() || !Number.isFinite(totalCents) || totalCents <= 0 || totalCents > 100000000 || !validDate} onPress={() => void run(async () => { await add('charge', chargeText.trim(), { amountCents: totalCents, dueDate: dueDate || null, instructions }); setChargeText(''); setAmount(''); setDueDate(''); setInstructions(''); await refresh(); }, 'Valor publicado no portal.')}>Publicar valor</AppButton>
