@@ -10,6 +10,7 @@ import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native
 import { useAppTheme } from '@/providers/theme-provider';
 import { TopNavigationActions } from '@/components/top-navigation-actions';
 import { MobileNavigation, navigationIcons } from '@/components/mobile-navigation';
+import { BrandTitle } from '@/components/brand-title';
 import { Icon } from '@/components/icon';
 import { radius, type ThemeColors } from '@/theme';
 
@@ -45,6 +46,8 @@ export default function SidebarLayout() {
         drawerStyle: styles.drawer,
         headerStyle: styles.header,
         headerShadowVisible: false,
+        headerTitleAlign: 'center',
+        headerTitle: () => <BrandTitle route={route.name} />,
         headerTintColor: colors.primary,
         headerTitleStyle: styles.headerTitle,
         headerRight: () => <TopNavigationActions />,

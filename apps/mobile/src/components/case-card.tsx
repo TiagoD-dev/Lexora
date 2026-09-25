@@ -7,80 +7,77 @@ import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import type { LegalCase } from '@/types/case';
 import { toLocalDate } from '@/utils/deadlines';
-import { hashTheme } from '@/utils/palette';
 import { priorityTheme } from '@/utils/priority';
 
 type CaseCardProps = { item: LegalCase; onPress: () => void; index?: number };
+const shortDate = (value: string) => new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' }).format(new Date(`${value}T12:00:00`));
 
 export function CaseCard({ item, onPress, index = 0 }: CaseCardProps) {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
-  const updatedDate = new Date(item.updatedAt);
-  const updated = Number.isNaN(updatedDate.getTime()) ? 'sem data' : new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' }).format(updatedDate);
-  const icon = hashTheme(colors, item.area || item.id);
   const priority = priorityTheme(colors, item.priority);
-  const today = toLocalDate();
+  const stripe = item.priority === 'Urgente' ? colors.danger : item.priority === 'Alta' ? colors.accent : colors.borderStrong;
   const nextDeadline = [...item.tasks].filter((task) => !task.completed && task.dueDate).sort((a, b) => (a.dueDate as string).localeCompare(b.dueDate as string))[0];
-  const overdue = !!nextDeadline?.dueDate && nextDeadline.dueDate < today;
+  const overdue = !!nextDeadline?.dueDate && nextDeadline.dueDate < toLocalDate();
   const openTasks = item.tasks.filter((task) => !task.completed).length;
   return (
     <Animated.View entering={FadeInDown.duration(280).delay(Math.min(index, 8) * 35)} style={styles.wrap}>
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-    >
-      <View style={styles.topLine}>
-        <View style={[styles.icon, { backgroundColor: icon.bg }]}><Icon name="gavel" size={20} color={icon.fg} /></View>
-        <View style={styles.content}>
-          <View style={styles.topRow}>
-            <Text numberOfLines={1} style={styles.reference}>{item.reference}</Text>
-            <View style={[styles.priorityPill, { backgroundColor: priority.bg }]}><Text style={[styles.priorityText, { color: priority.fg }]}>{item.priority}</Text></View>
+      <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+        <View style={[styles.stripe, { backgroundColor: stripe }]} />
+        <View style={styles.topRow}>
+          <View style={styles.refGroup}>
+            <View style={styles.refChip}><Text numberOfLines={1} style={styles.refText}>{item.reference}</Text></View>
+            <Text numberOfLines={1} style={styles.area}>{item.area.toLocaleUpperCase('pt-PT')}</Text>
           </View>
-          <Text numberOfLines={2} style={styles.title}>{item.title}</Text>
-          <Text numberOfLines={1} style={styles.meta}>{item.client} · {item.area}</Text>
-          <Text numberOfLines={1} style={styles.meta}>{item.court} · Atualizado {updated}</Text>
+          {item.priority === 'Urgente' || item.priority === 'Alta' ? <View style={[styles.pill, { backgroundColor: priority.bg }]}><Text style={[styles.pillText, { color: priority.fg }]}>{item.priority === 'Urgente' ? 'ALTA URGÊNCIA' : 'PRIORIDADE ALTA'}</Text></View> : <StatusBadge status={item.status} />}
         </View>
-        <StatusBadge status={item.status} />
-      </View>
-      {nextDeadline ? <View style={[styles.deadline, overdue && styles.deadlineOverdue]}><Icon name={overdue ? 'alert-circle-outline' : 'clock-outline'} size={13} color={overdue ? colors.danger : colors.textMuted} /><Text style={[styles.deadlineText, overdue && styles.deadlineTextOverdue]} numberOfLines={1}>{overdue ? 'Prazo em atraso' : 'Próximo prazo'} · {nextDeadline.title}</Text><Text style={[styles.deadlineDate, overdue && styles.deadlineTextOverdue]}>{new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' }).format(new Date(`${nextDeadline.dueDate}T12:00:00`))}</Text></View> : null}
-      <View style={styles.footer}><View style={styles.footerItem}><Icon name="file-document-outline" size={13} color={colors.textSoft} /><Text style={styles.footerText}>{item.documents.length} doc{item.documents.length === 1 ? '' : 's'}</Text></View><View style={styles.footerItem}><Icon name="checkbox-marked-circle-outline" size={13} color={colors.textSoft} /><Text style={styles.footerText}>{openTasks} tarefa{openTasks === 1 ? '' : 's'} por concluir</Text></View></View>
-    </Pressable>
+        <Text numberOfLines={2} style={styles.title}>{item.title}</Text>
+        <View style={styles.courtRow}><Icon name="scale-balance" size={14} color={colors.textSoft} /><Text numberOfLines={1} style={styles.court}>{item.court} · {item.client}</Text></View>
+        {nextDeadline ? <View style={[styles.deadline, overdue && styles.deadlineOverdue]}>
+          <Icon name={overdue ? 'bell-alert-outline' : 'clock-outline'} size={18} color={overdue ? colors.danger : colors.textMuted} />
+          <View style={styles.deadlineCopy}>
+            <View style={styles.deadlineTop}><Text style={[styles.deadlineLabel, overdue && styles.danger]}>{overdue ? 'PRAZO EM ATRASO' : 'PRÓXIMO PRAZO'}</Text><Text style={[styles.deadlineDate, overdue && styles.danger]}>{shortDate(nextDeadline.dueDate as string)}</Text></View>
+            <Text numberOfLines={2} style={styles.deadlineTitle}>{nextDeadline.title}</Text>
+          </View>
+        </View> : null}
+        <View style={styles.footer}>
+          <View style={styles.meta}>
+            <View style={styles.metaItem}><Icon name="file-document-outline" size={14} color={colors.textSoft} /><Text style={styles.metaText}>{item.documents.length} docs</Text></View>
+            <View style={styles.metaItem}><Icon name="alarm" size={14} color={colors.textSoft} /><Text style={styles.metaText}>{openTasks} prazos</Text></View>
+          </View>
+          <View style={styles.open}><Text style={styles.openText}>Abrir Dossier</Text><Icon name="arrow-right" size={14} color={colors.primary} /></View>
+        </View>
+      </Pressable>
     </Animated.View>
   );
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  wrap: { minWidth: 320, flexBasis: 420, flexGrow: 1 },
-  card: {
-    height: '100%',
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surface,
-  },
+  wrap: { minWidth: 280, maxWidth: '100%', flexBasis: 420, flexGrow: 1 },
+  card: { height: '100%', gap: 10, overflow: 'hidden', paddingVertical: 15, paddingLeft: 20, paddingRight: 15, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, backgroundColor: colors.surface },
   pressed: { opacity: 0.75 },
-  topLine: { flexDirection: 'row', alignItems: 'center' },
-  icon: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-  },
-  content: { flex: 1, marginHorizontal: 12 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
-  reference: { flex: 1, color: colors.primary, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  priorityPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
-  priorityText: { fontSize: 8, fontWeight: '800' },
-  title: { color: colors.textStrong, fontSize: 14, fontWeight: '700', lineHeight: 20 },
-  meta: { marginTop: 5, color: colors.textSoft, fontSize: 11 },
-  deadline: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 7, borderRadius: radius.md, backgroundColor: colors.surfaceMuted },
+  stripe: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 5 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  refGroup: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  refChip: { flexShrink: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: colors.surfaceMuted },
+  refText: { color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  area: { flexShrink: 0, color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
+  pill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.pill },
+  pillText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  title: { color: colors.textStrong, fontSize: 16, fontWeight: '800', lineHeight: 22 },
+  courtRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  court: { flex: 1, color: colors.textMuted, fontSize: 12 },
+  deadline: { flexDirection: 'row', gap: 10, padding: 11, borderRadius: radius.md, backgroundColor: colors.surfaceMuted },
   deadlineOverdue: { backgroundColor: colors.warningBackground },
-  deadlineText: { flex: 1, color: colors.textStrong, fontSize: 10, fontWeight: '700' },
-  deadlineDate: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
-  deadlineTextOverdue: { color: colors.danger },
-  footer: { marginTop: 10, flexDirection: 'row', gap: 14 },
-  footerItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  footerText: { color: colors.textSoft, fontSize: 10, fontWeight: '600' },
+  deadlineCopy: { flex: 1 },
+  deadlineTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  deadlineLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  deadlineDate: { color: colors.textMuted, fontSize: 11, fontWeight: '800' },
+  deadlineTitle: { marginTop: 2, color: colors.textStrong, fontSize: 13, lineHeight: 18 },
+  danger: { color: colors.danger },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { color: colors.textSoft, fontSize: 11, fontWeight: '600' },
+  open: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  openText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
 });

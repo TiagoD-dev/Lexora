@@ -76,9 +76,9 @@ export function TopNavigationActions() {
 
   return (
     <View style={styles.actions}>
-      <Pressable accessibilityLabel="Pesquisar na app" accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+      {width >= 420 && <Pressable accessibilityLabel="Pesquisar na app" accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
         <Icon name="magnify" size={20} color={colors.textMuted} />
-      </Pressable>
+      </Pressable>}
 
       <Pressable accessibilityLabel={`${notificationCount} notificações de prazos`} accessibilityRole="button" onPress={() => setNotifOpen(true)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
         <Icon name="bell-outline" size={20} color={colors.textMuted} />
@@ -94,7 +94,7 @@ export function TopNavigationActions() {
       <Pressable accessibilityLabel="Abrir menu do perfil" accessibilityRole="button" onPress={() => setMenuOpen(true)} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
         {showIdentity ? <View style={styles.identity}><Text numberOfLines={1} style={styles.name}>{settings.displayName}</Text><Text numberOfLines={1} style={styles.role}>{settings.professionalTitle || 'O meu perfil'}</Text></View> : null}
-        <Icon name="chevron-down" size={18} color={colors.textSoft} />
+        {width >= 420 && <Icon name="chevron-down" size={18} color={colors.textSoft} />}
       </Pressable>
 
       <Modal animationType="fade" onRequestClose={() => setMenuOpen(false)} transparent visible={menuOpen}>
@@ -150,7 +150,7 @@ const SEEN_STORAGE_KEY = '@lexora/notifications/seen/v1';
 const EMAILED_STORAGE_KEY = '@lexora/notifications/emailed/v1';
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 12 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 2, marginRight: 8 },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
   notificationBadge: { position: 'absolute', top: 3, right: 2, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 2, borderColor: colors.background, borderRadius: 9, backgroundColor: colors.danger },
   notificationBadgeText: { color: colors.white, fontSize: 12, fontWeight: '900' },
