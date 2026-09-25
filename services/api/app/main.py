@@ -1,28 +1,26 @@
 from io import BytesIO
 import re
+import os
 from pathlib import Path
 from uuid import uuid4
 
+from alembic import command
+from alembic.config import Config
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from . import models
-from .db import Base, engine, get_db
-from .routers import auth, billing, cases, clients, legal_updates, notifications
+from .db import get_db
+from .routers import auth, billing, cases, clients, legal_updates, notifications, portal
 from .security import get_current_user, get_user_from_token
 
-Base.metadata.create_all(bind=engine)
-
-with engine.begin() as connection:
-    existing_columns = {row[1] for row in connection.execute(text("PRAGMA table_info(users)"))}
-    if "role" not in existing_columns:
-        connection.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'"))
-    if "plan" not in existing_columns:
-        connection.execute(text("ALTER TABLE users ADD COLUMN plan VARCHAR(20) DEFAULT 'local'"))
+API_ROOT = Path(__file__).resolve().parent.parent
+alembic_cfg = Config(str(API_ROOT / "alembic.ini"))
+alembic_cfg.set_main_option("script_location", str(API_ROOT / "alembic"))
+command.upgrade(alembic_cfg, "head")
 
 app = FastAPI(
     title="Lexora API",
@@ -32,13 +30,23 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081"],
+    allow_origins=[origin.strip() for origin in os.environ.get("LEXORA_CORS_ORIGINS", "http://localhost:8081").split(",") if origin.strip()],
     allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def private_portal_responses(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/portal/"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+app.include_router(portal.router)
 app.include_router(auth.router)
 app.include_router(billing.router)
 app.include_router(clients.router)
