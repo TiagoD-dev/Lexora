@@ -1,0 +1,22 @@
+# Teste local semelhante a produção: API + Postgres. `docker compose up --build`
+services:
+  api:
+    build: services/api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://lexora:lexora@db/lexora
+    ports: ["8000:8000"]
+    volumes: ["api-data:/data"]
+    depends_on:
+      db: { condition: service_healthy }
+  db:
+    image: postgres:17-alpine
+    environment: { POSTGRES_USER: lexora, POSTGRES_PASSWORD: lexora, POSTGRES_DB: lexora }
+    volumes: ["db-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: pg_isready -U lexora
+      interval: 2s
+      retries: 15
+volumes:
+  api-data:
+  db-data:

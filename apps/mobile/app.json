@@ -8,9 +8,11 @@
     "scheme": "lexora",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/lexora-icon.png"
+      "icon": "./assets/images/lexora-icon.png",
+      "bundleIdentifier": "pt.lexora.app"
     },
     "android": {
+      "package": "pt.lexora.app",
       "adaptiveIcon": {
         "backgroundColor": "#7A1620",
         "foregroundImage": "./assets/images/lexora-adaptive.png"

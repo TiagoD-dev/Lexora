@@ -11,7 +11,7 @@ Assistente jurídico digital para advogados e escritórios de advocacia em Portu
 - **Assistente Lexora** — chat por caso que responde apenas com base no contexto desse caso (factos, entidades, documentos, timeline), usando o Gemini da Google; nunca inventa informação fora do que está registado, e cada resposta traz um aviso de que não substitui a validação humana.
 - **Atualidade jurídica / Fontes jurídicas** — feed agregado do Diário da República e do EUR-Lex (RSS oficiais), mais referências fixas ao Tribunal Constitucional e à DGSI; pesquisável no ecrã de Fontes.
 - **Autenticação** — registo/login com password, sessão por JWT.
-- **Perfil, planos/faturação** — atualmente apenas UI estática (mock), sem backend ligado.
+- **Perfil e planos/faturação** — perfil editável (`PATCH /auth/me`); subscrição dos planos via Stripe Checkout, com o plano atualizado pelo webhook.
 
 ## Arquitetura
 
@@ -19,12 +19,12 @@ Monorepo com duas partes:
 
 ```
 apps/mobile/    App React Native (Expo + expo-router), corre em iOS, Android e Web
-services/api/   API em FastAPI (Python), base de dados SQLite
+services/api/   API em FastAPI (Python), SQLite em desenvolvimento, Postgres em produção
 ```
 
 ### `services/api` — backend
 
-- **FastAPI** + **SQLAlchemy** sobre **SQLite** (`lexora.db`).
+- **FastAPI** + **SQLAlchemy** + **Alembic** (migrações aplicadas no arranque); SQLite (`lexora.db`) por omissão, Postgres via `DATABASE_URL`.
 - Routers: `auth`, `clients`, `cases` (inclui o endpoint do assistente), `legal_updates`, `notifications`.
 - Autenticação por JWT (`pyjwt`), passwords com `bcrypt`.
 - Extração de documentos com `pypdf`, `python-docx`, `openpyxl`.
@@ -56,6 +56,40 @@ npm run start   # ou: npm run web / npm run ios / npm run android
 ```
 
 Variáveis de ambiente principais (ver [`.env.example`](.env.example)): `EXPO_PUBLIC_API_URL`, `LEXORA_JWT_SECRET`, `GEMINI_API_KEY`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM`.
+
+## Deploy
+
+Nada é publicado automaticamente; estes são os passos para quem fizer o deploy.
+
+### API (contentor)
+
+```bash
+docker build -t lexora-api services/api
+docker run -p 8000:8000 --env-file .env -v lexora-data:/data lexora-api
+```
+
+Teste local semelhante a produção (API + Postgres): `docker compose up --build` na raiz.
+
+- **Base de dados:** definir `DATABASE_URL` com o Postgres gerido (`postgresql+psycopg://...`; URLs `postgres://` também são aceites). Sem ela, o contentor usa SQLite em `/data/lexora.db`. As migrações correm no arranque — usar um único processo/worker.
+- **Volume persistente em `/data`:** guarda os documentos carregados (`LEXORA_STORAGE_DIR`, incluindo os do portal) e o índice de legislação (`LEXORA_LEGAL_INDEX`). Fazer cópias de segurança em conjunto com a base de dados. O índice gera-se no contentor com `python ingest_legislation.py`; sem ele, as fontes legais do assistente ficam vazias.
+- **Variáveis obrigatórias:** `LEXORA_ENV=production`, `LEXORA_JWT_SECRET` (segredo longo e aleatório), `DATABASE_URL`, `GEMINI_API_KEY`, `LEXORA_CORS_ORIGINS` (origem do site), `LEXORA_FRONTEND_URL`, `SMTP_*` e `STRIPE_*`. Ver [`.env.example`](.env.example).
+- **HTTPS:** a cargo da plataforma de alojamento (proxy à frente do contentor). A porta segue `PORT` quando a plataforma a define.
+- **Stripe:** criar um webhook para `https://<api>/billing/webhook` com o evento `checkout.session.completed` e copiar o segredo para `STRIPE_WEBHOOK_SECRET`.
+
+### App (EAS)
+
+Os perfis estão em [`apps/mobile/eas.json`](apps/mobile/eas.json); substituir os URLs `exemplo.pt` pelos reais. Identificador iOS/Android: `pt.lexora.app` (`app.json`).
+
+```bash
+cd apps/mobile
+npm install -g eas-cli
+eas login && eas init                            # liga o projeto à conta Expo
+eas build --profile preview --platform all       # instalação interna (APK / ad hoc)
+eas build --profile production --platform all    # lojas
+eas submit --profile production --platform ios   # e --platform android
+```
+
+O perfil `development` precisa de `npx expo install expo-dev-client`. A versão Web compila-se com `npx expo export --platform web` e publica-se a pasta `dist/` num alojamento estático, com `EXPO_PUBLIC_API_URL` definido.
 
 ## Testes
 

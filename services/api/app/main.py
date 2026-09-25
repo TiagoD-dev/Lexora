@@ -13,8 +13,11 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from . import models
-from .db import get_db
+from .db import STORAGE_DIR, get_db
 from .routers import auth, billing, cases, clients, legal_updates, notifications, portal
+from .routers import fees  # importa também app.fees_models para Base.metadata
+from .routers import workflows  # importa também app.workflows_models para Base.metadata
+from .routers import leads  # importa também app.leads_models para Base.metadata
 from .security import get_current_user, get_user_from_token
 
 API_ROOT = Path(__file__).resolve().parent.parent
@@ -50,9 +53,12 @@ app.include_router(portal.router)
 app.include_router(auth.router)
 app.include_router(billing.router)
 app.include_router(clients.router)
+app.include_router(leads.router)
 app.include_router(cases.router)
 app.include_router(legal_updates.router)
 app.include_router(notifications.router)
+app.include_router(fees.router)
+app.include_router(workflows.router)
 
 
 @app.get("/health", tags=["system"])
@@ -61,7 +67,7 @@ def health_check() -> dict[str, str]:
 
 
 MAX_FILE_SIZE = 25 * 1024 * 1024
-DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "documents_storage"
+DOCUMENTS_DIR = STORAGE_DIR
 DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
 

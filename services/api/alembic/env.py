@@ -10,8 +10,8 @@ from alembic import context
 # Make `app` importable when alembic is run from services/api/.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.db import Base, engine  # noqa: E402
-from app import models, portal_models  # noqa: E402,F401  (registers models on Base.metadata)
+from app.db import DATABASE_URL, Base  # noqa: E402
+from app import models, portal_models, fees_models, leads_models, workflows_models  # noqa: E402,F401  (registers models on Base.metadata)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -23,7 +23,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Use this project's DB URL (see app/db.py) instead of alembic.ini.
-config.set_main_option("sqlalchemy.url", str(engine.url).replace("%", "%%"))
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 target_metadata = Base.metadata
 

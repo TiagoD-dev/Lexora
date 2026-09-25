@@ -14,12 +14,12 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from .. import models
-from ..db import get_db
+from ..db import STORAGE_DIR, get_db
 from ..portal_models import PortalAccess, PortalItem, PortalPublication
 from ..security import JWT_ALGORITHM, JWT_SECRET, bearer_scheme, get_current_user, get_user_from_token, hash_password, verify_password
 
 router = APIRouter(prefix='/portal', tags=['portal'])
-STORAGE = Path(__file__).resolve().parents[2] / 'documents_storage' / 'portal'
+STORAGE = STORAGE_DIR / 'portal'
 MAX_SIZE = 25 * 1024 * 1024
 ALLOWED = {'.pdf', '.docx', '.xlsx', '.txt', '.csv', '.png', '.jpg', '.jpeg'}
 

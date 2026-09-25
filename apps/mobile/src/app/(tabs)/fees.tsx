@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppInput } from '@/components/app-input';
 import { Choices, Copy, euros, Feedback, Hero, Panel, PreviewPage, Stat } from '@/components/business-preview';
 import { DateField } from '@/components/date-field';
@@ -9,28 +9,26 @@ import { Icon, type IconName } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import { parseLocalDate, toLocalDate } from '@/utils/deadlines';
+import { createFeeRemote, deleteFeeRemote, listFeesRemote, updateFeeRemote, type FeeEntry, type NewFeeEntry } from '@/services/fees-service';
 
 const KINDS = ['Tempo', 'Honorário fixo', 'Avença', 'Despesa'] as const;
 type Kind = typeof KINDS[number];
 const KIND_ICON: Record<Kind, IconName> = { Tempo: 'clock-outline', 'Honorário fixo': 'file-document-outline', Avença: 'calendar-sync-outline', Despesa: 'receipt-text-outline' };
-type Entry = { id: number; client: string; description: string; amount: number; kind: Kind; paid: boolean; dueDate: string };
+type Entry = FeeEntry & { kind: Kind };
 const inDays = (days: number) => { const date = new Date(); date.setDate(date.getDate() + days); return toLocalDate(date); };
-const initial: Entry[] = [
-  { id: 1, client: 'Ana Martins · Processo laboral', description: 'Análise documental · 2 horas', amount: 180, kind: 'Tempo', paid: false, dueDate: inDays(-4) },
-  { id: 2, client: 'Norte & Forma · Assessoria', description: 'Avença mensal de assessoria', amount: 650, kind: 'Avença', paid: false, dueDate: inDays(6) },
-  { id: 3, client: 'Miguel Costa · Arrendamento', description: 'Consulta e preparação de minuta', amount: 250, kind: 'Honorário fixo', paid: true, dueDate: inDays(-12) },
-  { id: 4, client: 'Ana Martins · Processo laboral', description: 'Taxa de justiça', amount: 102, kind: 'Despesa', paid: false, dueDate: inDays(15) },
-];
 const daysUntil = (date: string) => Math.round(((parseLocalDate(date)?.getTime() ?? Date.now()) - (parseLocalDate(toLocalDate())?.getTime() ?? Date.now())) / 86400000);
 const FILTERS = ['Todos', 'Por receber', 'Em atraso', 'Recebidos'] as const;
 
 export default function FeesPage() {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
-  const [entries, setEntries] = useState(initial);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<typeof FILTERS[number]>('Todos');
   const [editing, setEditing] = useState(false);
-  const [reminderId, setReminderId] = useState<number | null>(null);
+  const [reminderId, setReminderId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
+  const fail = (error: unknown) => setFeedback(error instanceof Error ? error.message : 'Não foi possível contactar o servidor.');
+  useEffect(() => { listFeesRemote().then(list => setEntries(list as Entry[])).catch(fail).finally(() => setLoading(false)); }, []);
   const sum = (list: Entry[]) => list.reduce((acc, entry) => acc + entry.amount, 0);
   const open = entries.filter(entry => !entry.paid);
   const overdue = open.filter(entry => daysUntil(entry.dueDate) < 0);
@@ -38,10 +36,25 @@ export default function FeesPage() {
   const registered = sum(entries);
   const share = registered ? Math.round(received / registered * 100) : 0;
   const visible = entries.filter(entry => filter === 'Todos' || (filter === 'Recebidos' ? entry.paid : filter === 'Em atraso' ? overdue.includes(entry) : !entry.paid)).sort((a, b) => Number(a.paid) - Number(b.paid) || a.dueDate.localeCompare(b.dueDate));
-  function save(entry: Omit<Entry, 'id' | 'paid'>) {
-    setEntries(current => [...current, { ...entry, id: Date.now(), paid: false }]);
-    setEditing(false); setFilter('Todos');
-    setFeedback('Registo adicionado à demonstração. Não foi emitida uma fatura.');
+  async function save(entry: NewFeeEntry) {
+    try {
+      const created = await createFeeRemote(entry) as Entry;
+      setEntries(current => [...current, created]);
+      setEditing(false); setFilter('Todos');
+      setFeedback('Registo guardado. Não foi emitida uma fatura.');
+    } catch (error) { fail(error); }
+  }
+  async function togglePaid(entry: Entry) {
+    try {
+      const updated = await updateFeeRemote(entry.id, { paid: !entry.paid }) as Entry;
+      setEntries(current => current.map(item => item.id === entry.id ? updated : item)); setReminderId(null); setFeedback('Estado atualizado.');
+    } catch (error) { fail(error); }
+  }
+  async function remove(entry: Entry) {
+    try {
+      await deleteFeeRemote(entry.id);
+      setEntries(current => current.filter(item => item.id !== entry.id)); setFeedback('Registo eliminado.');
+    } catch (error) { fail(error); }
   }
   return <PreviewPage title="Honorários e cobranças" subtitle="Do trabalho realizado ao valor recebido. Acompanha os honorários do escritório num só lugar.">
     <Hero label="POR RECEBER" value={euros(sum(open))} caption={`${open.length} ${open.length === 1 ? 'valor em aberto' : 'valores em aberto'}${overdue.length ? ` · ${overdue.length} em atraso (${euros(sum(overdue))})` : ''}`}>
@@ -73,13 +86,15 @@ export default function FeesPage() {
           <Text style={styles.entryMeta}>Vencimento {parseLocalDate(entry.dueDate)?.toLocaleDateString('pt-PT')}</Text>
         </View>
         <View style={styles.actions}>
-          <Pressable accessibilityRole="button" onPress={() => { setEntries(current => current.map(item => item.id === entry.id ? { ...item, paid: !item.paid } : item)); setReminderId(null); setFeedback('Estado atualizado apenas na demonstração.'); }} style={[styles.action, !entry.paid && styles.actionPrimary]}><Icon name={entry.paid ? 'undo' : 'check'} size={16} color={entry.paid ? colors.textStrong : colors.white} /><Text style={[styles.actionText, !entry.paid && { color: colors.white }]}>{entry.paid ? 'Reabrir' : 'Marcar recebido'}</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => togglePaid(entry)} style={[styles.action, !entry.paid && styles.actionPrimary]}><Icon name={entry.paid ? 'undo' : 'check'} size={16} color={entry.paid ? colors.textStrong : colors.white} /><Text style={[styles.actionText, !entry.paid && { color: colors.white }]}>{entry.paid ? 'Reabrir' : 'Marcar recebido'}</Text></Pressable>
           {!entry.paid && <Pressable accessibilityRole="button" onPress={() => setReminderId(reminderId === entry.id ? null : entry.id)} style={styles.action}><Icon name="email-outline" size={16} color={colors.textStrong} /><Text style={styles.actionText}>Lembrete</Text></Pressable>}
+          <Pressable accessibilityRole="button" onPress={() => remove(entry)} style={styles.action}><Icon name="delete-outline" size={16} color={colors.danger} /><Text style={[styles.actionText, { color: colors.danger }]}>Eliminar</Text></Pressable>
         </View>
         {reminderId === entry.id && <View style={styles.reminder}><Text style={styles.totalLabel}>RASCUNHO DE LEMBRETE · NÃO ENVIADO</Text><Text style={styles.reminderText}>Caro(a) cliente, encontra-se por regularizar o valor de {euros(entry.amount)}, referente a «{entry.description}», com vencimento em {parseLocalDate(entry.dueDate)?.toLocaleDateString('pt-PT')}. Agradecemos a sua atenção.</Text></View>}
       </View>;
     })}
-    {visible.length === 0 && <Panel title="Sem registos"><Copy>Não existem valores neste estado.</Copy></Panel>}
+    {loading && <ActivityIndicator color={colors.primary} />}
+    {!loading && visible.length === 0 && <Panel title="Sem registos"><Copy>{entries.length ? 'Não existem valores neste estado.' : 'Ainda não registou trabalho ou despesas.'}</Copy></Panel>}
   </PreviewPage>;
 }
 
@@ -94,10 +109,11 @@ type Vat = keyof typeof VAT;
 const OTHER = 'Outro (escrever)';
 const parse = (text: string) => Number(text.replace(',', '.'));
 
-function EntryForm({ onSave, onCancel }: { onSave: (entry: Omit<Entry, 'id' | 'paid'>) => void; onCancel: () => void }) {
+function EntryForm({ onSave, onCancel }: { onSave: (entry: NewFeeEntry) => void; onCancel: () => void }) {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
   const { cases } = useCases();
-  const caseOptions = [...cases.filter(item => item.status !== 'Arquivado').map(item => `${item.client} · ${item.title}`), OTHER];
+  const active = cases.filter(item => item.status !== 'Arquivado');
+  const caseOptions = [...active.map(item => `${item.client} · ${item.title}`), OTHER];
   const [kind, setKind] = useState<Kind>('Tempo');
   const [caseLabel, setCaseLabel] = useState(caseOptions[0]!);
   const [client, setClient] = useState('');
@@ -113,7 +129,7 @@ function EntryForm({ onSave, onCancel }: { onSave: (entry: Omit<Entry, 'id' | 'p
   const tax = Math.round(subtotal * VAT[vat] * 100) / 100;
   const total = Math.round((subtotal + tax) * 100) / 100;
   const missing = [!who && 'cliente', !description.trim() && 'descrição', !(value > 0 && (kind !== 'Tempo' || duration > 0)) && 'valor', !parseLocalDate(dueDate) && 'vencimento'].filter(Boolean);
-  const submit = () => { if (missing.length) return; onSave({ client: who, description: kind === 'Tempo' ? `${description.trim()} · ${String(duration).replace('.', ',')} h` : description.trim(), amount: total, kind, dueDate }); };
+  const submit = () => { if (missing.length) return; onSave({ caseId: active[caseOptions.indexOf(caseLabel)]?.id ?? null, client: who, description: kind === 'Tempo' ? `${description.trim()} · ${String(duration).replace('.', ',')} h` : description.trim(), amount: total, hours: kind === 'Tempo' ? duration : null, vat, kind, dueDate }); };
   return <View style={styles.form}>
     <View style={styles.formHead}><View style={styles.formIcon}><Icon name="cash-register" size={20} color={colors.primary} /></View><View style={{ flex: 1 }}><Text style={styles.formTitle}>Novo registo</Text><Text style={styles.entryMeta}>Trabalho, avença ou despesa a cobrar ao cliente.</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Fechar" onPress={onCancel} hitSlop={10}><Icon name="close" size={22} color={colors.textMuted} /></Pressable></View>
 

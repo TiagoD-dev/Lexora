@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
 import { Copy, Feedback, Hero, Panel, PreviewPage, Stat } from '@/components/business-preview';
 import { EmptyState } from '@/components/empty-state';
 import { Icon, type IconName } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
+import { createWorkflowRemote, deleteWorkflowRemote, listWorkflowsRemote, updateWorkflowRemote, type WorkflowRecord } from '@/services/workflows-service';
 import { radius, type ThemeColors } from '@/theme';
 
 const templates = {
@@ -16,7 +17,9 @@ const templates = {
 const MODELS: { title: string; icon: IconName }[] = [{ title: 'Ficha de consulta', icon: 'clipboard-account-outline' }, { title: 'Pedido de documentação', icon: 'file-send-outline' }, { title: 'Resumo de acompanhamento', icon: 'text-box-check-outline' }];
 type Area = keyof typeof templates;
 type Step = { title: string; done: boolean };
-type Workflow = { id: number; name: string; area: Area; steps: Step[] };
+type Workflow = { id: string; name: string; area: Area; steps: Step[] };
+// Etapas vêm do modelo estático da área; o servidor guarda só os índices concluídos.
+const toWorkflow = (record: WorkflowRecord): Workflow => { const area = (record.area in templates ? record.area : 'Laboral') as Area; return { id: record.id, name: record.name, area, steps: templates[area].steps.map((title, index) => ({ title, done: record.completed.includes(index) })) }; };
 const AREAS = Object.keys(templates) as Area[];
 
 export default function WorkflowsPage() {
@@ -26,13 +29,19 @@ export default function WorkflowsPage() {
   const [active, setActive] = useState<Workflow[]>([]);
   const [feedback, setFeedback] = useState('');
   const [model, setModel] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { listWorkflowsRemote().then(records => setActive(records.map(toWorkflow))).catch(() => setFeedback('Não foi possível carregar os fluxos.')).finally(() => setLoading(false)); }, []);
   const template = templates[area];
   const allSteps = active.flatMap(workflow => workflow.steps);
   const doneSteps = allSteps.filter(step => step.done).length;
   const share = allSteps.length ? Math.round(doneSteps / allSteps.length * 100) : 0;
   const finished = active.filter(workflow => workflow.steps.every(step => step.done)).length;
-  const toggle = (id: number, index: number) => setActive(current => current.map(item => item.id === id ? { ...item, steps: item.steps.map((entry, i) => i === index ? { ...entry, done: !entry.done } : entry) } : item));
-  const create = () => { setActive(current => [{ id: Date.now(), name: name.trim(), area, steps: template.steps.map(title => ({ title, done: false })) }, ...current]); setName(''); setFeedback('Fluxo criado na demonstração. Toca nas etapas para as marcar como concluídas.'); };
+  const toggle = (workflow: Workflow, index: number) => {
+    const completed = workflow.steps.map((step, i) => (i === index ? !step.done : step.done) ? i : -1).filter(i => i >= 0);
+    updateWorkflowRemote(workflow.id, completed).then(record => setActive(current => current.map(item => item.id === record.id ? toWorkflow(record) : item))).catch(() => setFeedback('Não foi possível guardar a etapa.'));
+  };
+  const create = () => createWorkflowRemote({ name: name.trim(), area }).then(record => { setActive(current => [toWorkflow(record), ...current]); setName(''); setFeedback('Fluxo criado. Toca nas etapas para as marcar como concluídas.'); }).catch(() => setFeedback('Não foi possível criar o fluxo.'));
+  const remove = (id: string) => deleteWorkflowRemote(id).then(() => setActive(current => current.filter(item => item.id !== id))).catch(() => setFeedback('Não foi possível remover o fluxo.'));
 
   return <PreviewPage title="Fluxos jurídicos" subtitle="Organiza o método do escritório em etapas claras, documentos pedidos e modelos reutilizáveis.">
     <Hero label="FLUXOS EM CURSO" value={String(active.length - finished)} caption={active.length ? `${doneSteps} de ${allSteps.length} etapas concluídas em ${active.length} ${active.length === 1 ? 'fluxo' : 'fluxos'}` : 'Escolhe uma área jurídica e inicia o primeiro fluxo guiado.'}>
@@ -64,14 +73,15 @@ export default function WorkflowsPage() {
     </Panel>
 
     <View style={styles.cta}>
-      <View style={styles.ctaHead}><View style={styles.iconBoxSelected}><Icon name="rocket-launch-outline" size={20} color={colors.white} /></View><View style={styles.grow}><Text style={styles.ctaTitle}>Iniciar fluxo de {area}</Text><Text style={styles.muted}>Cria um processo de demonstração com as {template.steps.length} etapas deste modelo.</Text></View></View>
+      <View style={styles.ctaHead}><View style={styles.iconBoxSelected}><Icon name="rocket-launch-outline" size={20} color={colors.white} /></View><View style={styles.grow}><Text style={styles.ctaTitle}>Iniciar fluxo de {area}</Text><Text style={styles.muted}>Cria um processo com as {template.steps.length} etapas deste modelo.</Text></View></View>
       <AppInput label="Nome do processo" value={name} onChangeText={setName} placeholder="Ex.: Ana Martins · Acompanhamento laboral" />
       <AppButton disabled={!name.trim()} onPress={create}>Iniciar fluxo</AppButton>
     </View>
     <Feedback>{feedback}</Feedback>
 
     <SectionTitle icon="timeline-check-outline" title={`Os meus fluxos (${active.length})`} styles={styles} />
-    {active.length === 0 && <EmptyState symbol="timeline-text-outline" title="Ainda sem fluxos" description="Escolhe uma área, dá um nome ao processo e inicia o primeiro fluxo guiado." />}
+    {loading && <ActivityIndicator color={colors.primary} />}
+    {!loading && active.length === 0 && <EmptyState symbol="timeline-text-outline" title="Ainda sem fluxos" description="Escolhe uma área, dá um nome ao processo e inicia o primeiro fluxo guiado." />}
     {active.map(workflow => {
       const done = workflow.steps.filter(step => step.done).length;
       const next = workflow.steps.find(step => !step.done);
@@ -85,7 +95,8 @@ export default function WorkflowsPage() {
         </View>
         <View style={[styles.track, { backgroundColor: colors.surfaceMuted }]}><View style={[styles.fill, { width: `${percent}%`, backgroundColor: next ? colors.primary : colors.successText }]} /></View>
         {next && <View style={styles.next}><Icon name="arrow-right-circle" size={16} color={colors.primary} /><Text style={styles.nextText}>Próxima etapa: {next.title}</Text></View>}
-        <Timeline steps={workflow.steps} onToggle={index => toggle(workflow.id, index)} styles={styles} colors={colors} />
+        <Timeline steps={workflow.steps} onToggle={index => toggle(workflow, index)} styles={styles} colors={colors} />
+        <Pressable accessibilityRole="button" onPress={() => remove(workflow.id)}><Text style={styles.muted}>Remover fluxo</Text></Pressable>
       </View>;
     })}
   </PreviewPage>;

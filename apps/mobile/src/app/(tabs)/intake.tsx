@@ -1,32 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
 import { Choices, Copy, euros, Feedback, Hero, Panel, PreviewPage, Row } from '@/components/business-preview';
+import { EmptyState } from '@/components/empty-state';
 import { Icon, type IconName } from '@/components/icon';
+import { useAuth } from '@/providers/auth-provider';
+import { useClients } from '@/providers/clients-provider';
 import { useAppTheme } from '@/providers/theme-provider';
+import { createLeadRemote, LEAD_STAGES as stages, listLeadsRemote, updateLeadRemote, type Lead, type LeadStage as Stage } from '@/services/leads-service';
 import { radius, type ThemeColors } from '@/theme';
 
-const stages = ['Novo contacto', 'Consulta', 'Proposta', 'Contratado'] as const;
-type Stage = typeof stages[number];
 const AREAS = ['Laboral', 'Família', 'Cobranças', 'Arrendamento', 'Societário'];
 const SOURCES = ['Website', 'Recomendação', 'Telefone'];
 const SOURCE_ICON: Record<string, IconName> = { Website: 'web', Recomendação: 'account-heart-outline', Telefone: 'phone-outline' };
-type Lead = { id: number; name: string; email: string; area: string; source: string; stage: Stage; value: number; notes: string; createdAt: number };
 const DAY = 86400000;
-const initial: Lead[] = [
-  { id: 1, name: 'Inês Pereira', email: 'ines@example.com', area: 'Laboral', source: 'Website', stage: 'Novo contacto', value: 0, notes: 'Pretende agendar uma consulta inicial sobre despedimento.', createdAt: Date.now() - DAY },
-  { id: 2, name: 'Oficina do Bairro', email: 'oficina@example.com', area: 'Cobranças', source: 'Recomendação', stage: 'Proposta', value: 750, notes: 'Proposta de acompanhamento em preparação.', createdAt: Date.now() - 9 * DAY },
-  { id: 3, name: 'João Silva', email: 'joao@example.com', area: 'Família', source: 'Website', stage: 'Consulta', value: 0, notes: 'Recolher disponibilidade para consulta.', createdAt: Date.now() - 4 * DAY },
-  { id: 4, name: 'Construções Vale Lda.', email: 'geral@example.com', area: 'Societário', source: 'Telefone', stage: 'Contratado', value: 1200, notes: 'Revisão de pacto social e aumento de capital.', createdAt: Date.now() - 21 * DAY },
-];
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]!.toUpperCase()).join('');
-const age = (time: number) => { const days = Math.floor((Date.now() - time) / DAY); return days === 0 ? 'hoje' : days === 1 ? 'há 1 dia' : `há ${days} dias`; };
+const age = (iso: string) => { const days = Math.floor((Date.now() - Date.parse(iso)) / DAY); return days === 0 ? 'hoje' : days === 1 ? 'há 1 dia' : `há ${days} dias`; };
 
 export default function IntakePage() {
   const { colors } = useAppTheme(); const styles = makeStyles(colors); const router = useRouter();
-  const [leads, setLeads] = useState(initial);
+  const { user } = useAuth(); const { createClient } = useClients();
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'Todos' | Stage>('Todos');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -34,7 +31,7 @@ export default function IntakePage() {
   const [area, setArea] = useState('Laboral');
   const [notes, setNotes] = useState('');
   const [source, setSource] = useState('Website');
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [proposal, setProposal] = useState('');
   const [feedback, setFeedback] = useState('');
   const valid = !!name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -43,9 +40,27 @@ export default function IntakePage() {
   const active = leads.filter(lead => lead.stage !== 'Contratado');
   const conversion = leads.length ? Math.round(count('Contratado') / leads.length * 100) : 0;
   const stageColor: Record<Stage, string> = { 'Novo contacto': '#DDB0AC', Consulta: '#D9B454', Proposta: '#F7F1E4', Contratado: '#8BD3AA' };
-  function changeStage(id: number, stage: Stage) {
-    setLeads(current => current.map(lead => lead.id === id ? { ...lead, stage } : lead));
-    setFeedback(stage === 'Contratado' ? 'Contratação simulada. Cria a ficha de cliente para começar a trabalhar o caso.' : `Movido para «${stage}» na demonstração.`);
+  useEffect(() => {
+    if (!user) return;
+    let active = true; setLoading(true);
+    listLeadsRemote().then(items => { if (active) setLeads(items); }).catch((error: Error) => { if (active) setFeedback(error.message); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [user]);
+  async function save(id: string, patch: Parameters<typeof updateLeadRemote>[1], message: string) {
+    try { const saved = await updateLeadRemote(id, patch); setLeads(current => current.map(lead => lead.id === id ? saved : lead)); setFeedback(message); return true; }
+    catch (error) { setFeedback((error as Error).message); return false; }
+  }
+  const changeStage = (id: string, stage: Stage) => save(id, { stage }, stage === 'Contratado' ? 'Contratado. Cria a ficha de cliente para começar a trabalhar o caso.' : `Movido para «${stage}».`);
+  async function addLead() {
+    try {
+      const lead = await createLeadRemote({ name: name.trim(), email: email.trim(), area, source, notes: notes.trim() });
+      setLeads(current => [lead, ...current]); setName(''); setEmail(''); setNotes(''); setOpen(false); setFilter('Todos'); setFeedback('Contacto adicionado.');
+    } catch (error) { setFeedback((error as Error).message); }
+  }
+  async function convert(lead: Lead) {
+    const clientId = lead.clientId || createClient({ name: lead.name, type: 'Particular', status: 'Ativo', nif: '', email: lead.email, phone: '', address: '', notes: lead.notes });
+    if (!lead.clientId && !await save(lead.id, { clientId }, 'Ficha de cliente criada.')) return;
+    router.push({ pathname: '/clients/[id]', params: { id: clientId } });
   }
   return <PreviewPage title="Captação de clientes" subtitle="Acompanha cada oportunidade, desde o primeiro contacto até à contratação.">
     <Hero label="PROPOSTAS EM ABERTO" value={euros(leads.filter(lead => lead.stage === 'Proposta').reduce((sum, lead) => sum + lead.value, 0))} caption={`${active.length} ${active.length === 1 ? 'oportunidade ativa' : 'oportunidades ativas'} · taxa de conversão ${conversion}%`}>
@@ -61,12 +76,14 @@ export default function IntakePage() {
       <Copy strong>Origem</Copy>
       <View style={styles.sources}>{SOURCES.map(item => <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: item === source }} onPress={() => setSource(item)} style={[styles.source, item === source && styles.sourceActive]}><Icon name={SOURCE_ICON[item]!} size={20} color={item === source ? colors.primary : colors.textMuted} /><Text style={[styles.sourceText, item === source && { color: colors.primary }]}>{item}</Text></Pressable>)}</View>
       <AppInput label="Resumo do pedido" multiline value={notes} onChangeText={setNotes} />
-      <AppButton disabled={!valid} onPress={() => { setLeads(current => [{ id: Date.now(), name: name.trim(), email: email.trim(), area, source, notes: notes.trim(), stage: 'Novo contacto', value: 0, createdAt: Date.now() }, ...current]); setName(''); setEmail(''); setNotes(''); setOpen(false); setFilter('Todos'); setFeedback('Contacto adicionado à demonstração.'); }}>Adicionar contacto</AppButton>
+      <AppButton disabled={!valid} onPress={addLead}>Adicionar contacto</AppButton>
       {!valid && <Copy>Introduz um nome e um email válido.</Copy>}
     </Panel>}
     <Feedback>{feedback}</Feedback>
 
-    <Choices values={['Todos', ...stages] as const} value={filter} onChange={setFilter} counts={{ Todos: leads.length, ...Object.fromEntries(stages.map(stage => [stage, count(stage)])) }} />
+    {loading && <Panel title="A carregar contactos"><Copy>Um momento…</Copy></Panel>}
+    {!loading && !leads.length && <EmptyState symbol="account-plus-outline" title="Sem contactos" description="Adiciona o primeiro contacto para acompanhar a oportunidade até à contratação." />}
+    {!!leads.length && <Choices values={['Todos', ...stages] as const} value={filter} onChange={setFilter} counts={{ Todos: leads.length, ...Object.fromEntries(stages.map(stage => [stage, count(stage)])) }} />}
     {leads.filter(lead => filter === 'Todos' || lead.stage === filter).map(lead => {
       const index = stages.indexOf(lead.stage); const next = stages[index + 1]; const won = lead.stage === 'Contratado';
       return <View key={lead.id} style={styles.lead}>
@@ -84,7 +101,7 @@ export default function IntakePage() {
         {lead.value > 0 && <View style={styles.valueRow}><Text style={styles.valueLabel}>{won ? 'HONORÁRIOS ACORDADOS' : 'PROPOSTA'}</Text><Text style={styles.value}>{euros(lead.value)}</Text></View>}
         <View style={styles.actions}>
           {next && <Pressable accessibilityRole="button" onPress={() => changeStage(lead.id, next)} style={[styles.action, styles.actionPrimary]}><Text style={[styles.actionText, { color: colors.white }]}>Avançar para {next}</Text><Icon name="arrow-right" size={16} color={colors.white} /></Pressable>}
-          {won && <Pressable accessibilityRole="button" onPress={() => router.push('/clients/new')} style={[styles.action, styles.actionPrimary]}><Icon name="account-plus-outline" size={16} color={colors.white} /><Text style={[styles.actionText, { color: colors.white }]}>Criar ficha de cliente</Text></Pressable>}
+          {won && <Pressable accessibilityRole="button" onPress={() => convert(lead)} style={[styles.action, styles.actionPrimary]}><Icon name="account-plus-outline" size={16} color={colors.white} /><Text style={[styles.actionText, { color: colors.white }]}>{lead.clientId ? 'Abrir ficha de cliente' : 'Criar ficha de cliente'}</Text></Pressable>}
           {!won && <Pressable accessibilityRole="button" onPress={() => { setSelectedId(selectedId === lead.id ? null : lead.id); setProposal(lead.value ? String(lead.value) : ''); }} style={styles.action}><Icon name="file-sign" size={16} color={colors.textStrong} /><Text style={styles.actionText}>Proposta</Text></Pressable>}
           <Pressable accessibilityRole="button" accessibilityLabel={`Enviar email a ${lead.name}`} onPress={() => Linking.openURL(`mailto:${lead.email}`)} style={styles.action}><Icon name="email-outline" size={16} color={colors.textStrong} /><Text style={styles.actionText}>Email</Text></Pressable>
         </View>
@@ -92,11 +109,11 @@ export default function IntakePage() {
           <Text style={styles.valueLabel}>PROPOSTA DE HONORÁRIOS · {lead.area.toUpperCase()}</Text>
           <Copy>O âmbito e as condições serão revistos pelo advogado antes do envio.</Copy>
           <AppInput label="Honorários propostos (€), sem IVA" value={proposal} onChangeText={setProposal} keyboardType="decimal-pad" />
-          <Row><AppButton disabled={!Number.isFinite(proposalValue) || proposalValue <= 0} onPress={() => { setLeads(current => current.map(item => item.id === lead.id ? { ...item, value: Math.round(proposalValue * 100) / 100, stage: 'Proposta' } : item)); setSelectedId(null); setFeedback('Proposta guardada na demonstração. Nenhum email foi enviado.'); }}>Guardar proposta</AppButton><AppButton variant="ghost" onPress={() => setSelectedId(null)}>Cancelar</AppButton></Row>
+          <Row><AppButton disabled={!Number.isFinite(proposalValue) || proposalValue <= 0} onPress={async () => { if (await save(lead.id, { value: Math.round(proposalValue * 100) / 100, stage: 'Proposta' }, 'Proposta guardada. Nenhum email foi enviado.')) setSelectedId(null); }}>Guardar proposta</AppButton><AppButton variant="ghost" onPress={() => setSelectedId(null)}>Cancelar</AppButton></Row>
         </View>}
       </View>;
     })}
-    {!leads.some(lead => filter === 'Todos' || lead.stage === filter) && <Panel title="Sem contactos nesta etapa"><Copy>Altera o filtro ou adiciona um contacto.</Copy></Panel>}
+    {!!leads.length && !leads.some(lead => filter === 'Todos' || lead.stage === filter) && <Panel title="Sem contactos nesta etapa"><Copy>Altera o filtro ou adiciona um contacto.</Copy></Panel>}
   </PreviewPage>;
 }
 
