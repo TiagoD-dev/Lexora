@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Drawer,
   DrawerContentScrollView,
@@ -8,26 +9,31 @@ import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native
 
 import { useAppTheme } from '@/providers/theme-provider';
 import { TopNavigationActions } from '@/components/top-navigation-actions';
+import { MobileNavigation, navigationIcons } from '@/components/mobile-navigation';
+import { Icon } from '@/components/icon';
 import { radius, type ThemeColors } from '@/theme';
 
-const menuIcons: Record<string, string> = {
-  home: '⌂',
-  clients: '◇',
-  cases: '□',
-  tasks: '✓',
-  documents: '▤',
-  assistant: '✦',
-  sources: '§',
-  alerts: '◉',
-  profile: '○',
-};
 
 export default function SidebarLayout() {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
   const { width } = useWindowDimensions();
-  const hasPermanentSidebar = width >= 900;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const hasPermanentSidebar = mounted && width >= 900;
   return (
     <Drawer
+      layout={({ children, state, navigation }) => (
+        <View style={styles.shell}>
+          <View style={styles.shell}>{children}</View>
+          {!hasPermanentSidebar ? (
+            <MobileNavigation
+              routeName={state.routes[state.index].name}
+              onNavigate={(name) => navigation.navigate(name)}
+              onMore={() => navigation.dispatch({ type: 'OPEN_DRAWER' })}
+            />
+          ) : null}
+        </View>
+      )}
       drawerContent={(props) => <SidebarContent {...props} />}
       screenOptions={({ route }) => ({
         drawerType: hasPermanentSidebar ? 'permanent' : 'front',
@@ -44,18 +50,32 @@ export default function SidebarLayout() {
         headerRight: () => <TopNavigationActions />,
         sceneStyle: { backgroundColor: colors.background },
         drawerIcon: ({ color }) => (
-          <Text style={[styles.menuIcon, { color }]}>{menuIcons[route.name] ?? '·'}</Text>
+          <Icon name={navigationIcons[route.name] ?? 'circle-small'} size={20} color={color as string} />
         ),
       })}
     >
       <Drawer.Screen name="home" options={{ drawerLabel: 'Hoje', title: 'Hoje' }} />
       <Drawer.Screen name="clients" options={{ drawerLabel: 'Clientes', title: 'Clientes' }} />
+      <Drawer.Screen name="clients/[id]" options={{ drawerItemStyle: { display: 'none' }, title: 'Cliente' }} />
+      <Drawer.Screen name="clients/new" options={{ drawerItemStyle: { display: 'none' }, title: 'Novo cliente' }} />
+      <Drawer.Screen name="clients/edit/[id]" options={{ drawerItemStyle: { display: 'none' }, title: 'Editar cliente' }} />
       <Drawer.Screen name="cases" options={{ drawerLabel: 'Casos', title: 'Casos' }} />
+      <Drawer.Screen name="cases/[id]" options={{ drawerItemStyle: { display: 'none' }, title: 'Caso' }} />
+      <Drawer.Screen name="cases/new" options={{ drawerItemStyle: { display: 'none' }, title: 'Novo caso' }} />
+      <Drawer.Screen name="cases/edit/[id]" options={{ drawerItemStyle: { display: 'none' }, title: 'Editar caso' }} />
       <Drawer.Screen name="tasks" options={{ drawerLabel: 'Tarefas e prazos', title: 'Tarefas' }} />
+      <Drawer.Screen name="tasks/new" options={{ drawerItemStyle: { display: 'none' }, title: 'Nova tarefa' }} />
       <Drawer.Screen name="documents" options={{ drawerLabel: 'Documentos', title: 'Documentos' }} />
+      <Drawer.Screen name="documents/review/[caseId]/[documentId]" options={{ drawerItemStyle: { display: 'none' }, title: 'Rever documento' }} />
+      <Drawer.Screen name="fees" options={{ drawerLabel: 'Honorários e cobranças', title: 'Honorários' }} />
+      <Drawer.Screen name="client-portal" options={{ drawerLabel: 'Portal do cliente', title: 'Portal do cliente' }} />
+      <Drawer.Screen name="workflows" options={{ drawerLabel: 'Fluxos jurídicos', title: 'Fluxos jurídicos' }} />
+      <Drawer.Screen name="intake" options={{ drawerLabel: 'Captação de clientes', title: 'Captação de clientes' }} />
       <Drawer.Screen name="assistant" options={{ drawerLabel: 'Assistente Lexora', title: 'Assistente' }} />
+      <Drawer.Screen name="assistant/[caseId]" options={{ drawerItemStyle: { display: 'none' }, title: 'Assistente' }} />
       <Drawer.Screen name="sources" options={{ drawerLabel: 'Fontes jurídicas', title: 'Fontes' }} />
       <Drawer.Screen name="alerts" options={{ drawerLabel: 'Atualidade jurídica', title: 'Atualidade' }} />
+      <Drawer.Screen name="search" options={{ drawerItemStyle: { display: 'none' }, title: 'Pesquisa' }} />
       <Drawer.Screen name="profile" options={{ drawerItemStyle: { display: 'none' }, drawerLabel: 'Definições', title: 'Definições' }} />
       <Drawer.Screen name="profile/edit" options={{ drawerItemStyle: { display: 'none' }, drawerLabel: 'Editar perfil', title: 'Editar perfil' }} />
       <Drawer.Screen name="billing" options={{ drawerItemStyle: { display: 'none' }, drawerLabel: 'Planos', title: 'Planos' }} />
@@ -93,6 +113,7 @@ function SidebarContent(props: DrawerContentComponentProps) {
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  shell: { flex: 1 },
   drawer: { width: 286, backgroundColor: colors.surface },
   sidebarContent: { flexGrow: 1, paddingTop: 0 },
   brandBlock: {
@@ -108,19 +129,18 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: '#F7F4EB',
   },
   brandLogo: { position: 'absolute', top: -34, left: -10, width: 250, height: 140 },
-  tagline: { marginTop: -2, marginLeft: 5, color: colors.textMuted, fontSize: 10 },
+  tagline: { marginTop: -2, marginLeft: 5, color: colors.textMuted, fontSize: 12 },
   menu: { flex: 1, paddingTop: 20 },
   menuTitle: {
     marginBottom: 8,
     paddingHorizontal: 28,
     color: colors.textSoft,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.1,
   },
   drawerItem: { minHeight: 43, borderRadius: radius.md, marginHorizontal: 12, marginVertical: 1 },
   drawerLabel: { marginLeft: -12, fontSize: 14, fontWeight: '600' },
-  menuIcon: { width: 22, fontSize: 19, textAlign: 'center' },
   header: { backgroundColor: colors.background },
   headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
   sidebarNotice: {
@@ -130,5 +150,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.primaryLight,
   },
   noticeTitle: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  noticeText: { marginTop: 5, color: colors.textMuted, fontSize: 10, lineHeight: 15 },
+  noticeText: { marginTop: 5, color: colors.textMuted, fontSize: 12, lineHeight: 18 },
 });
+
+

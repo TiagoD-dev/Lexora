@@ -22,26 +22,25 @@ export function ScreenHeader({ title, subtitle, actionLabel, onActionPress, show
         <Text style={styles.backText}>‹</Text>
       </Pressable> : null}
       <View style={styles.copy}>
-        <Text numberOfLines={1} style={styles.title}>{title}</Text>
-        {subtitle ? <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text> : null}
+        <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {actionLabel && onActionPress ? (
         <Pressable accessibilityRole="button" onPress={onActionPress} style={styles.action}>
           <Text style={styles.actionText}>{actionLabel}</Text>
         </Pressable>
-      ) : <View style={styles.placeholder} />}
+       ) : null}
     </View>
   );
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  back: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   backText: { color: colors.primary, fontSize: 36, lineHeight: 38, fontWeight: '400' },
-  copy: { flex: 1 },
+  copy: { flex: 1, minWidth: 0, paddingVertical: 10 },
   title: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  subtitle: { marginTop: 2, color: colors.textMuted, fontSize: 11 },
-  action: { minWidth: 44, minHeight: 42, alignItems: 'center', justifyContent: 'center' },
+  subtitle: { marginTop: 2, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  action: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   actionText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
-  placeholder: { width: 44 },
 });

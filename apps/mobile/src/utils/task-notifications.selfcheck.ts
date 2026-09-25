@@ -11,6 +11,14 @@ function reminderFireDate(dueDate: string, daysBefore: number) {
   return fireDate;
 }
 
+function overdueFireDate(dueDate: string) {
+  const due = parseLocalDate(dueDate)!;
+  const fireDate = new Date(due);
+  fireDate.setDate(fireDate.getDate() + 1);
+  fireDate.setHours(0, 0, 0, 0);
+  return fireDate;
+}
+
 function assertEqual(actual: unknown, expected: unknown, label: string) {
   if (String(actual) !== String(expected)) throw new Error(`FAIL ${label}: expected ${expected}, got ${actual}`);
   console.log(`OK ${label}`);
@@ -21,4 +29,6 @@ assertEqual(reminderFireDate(due, 0).toDateString(), new Date(2026, 8, 15).toDat
 assertEqual(reminderFireDate(due, 1).toDateString(), new Date(2026, 8, 14).toDateString(), 'reminderDays=1 fires day before');
 assertEqual(reminderFireDate(due, 7).toDateString(), new Date(2026, 8, 8).toDateString(), 'reminderDays=7 fires a week before');
 assertEqual(reminderFireDate(due, 3).getHours(), 9, 'fires at 09:00');
+assertEqual(overdueFireDate(due).toDateString(), new Date(2026, 8, 16).toDateString(), 'overdue alert fires the day after the deadline');
+assertEqual(overdueFireDate(due).getHours(), 0, 'overdue alert fires at midnight');
 console.log('task-notifications self-check passed');

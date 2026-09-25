@@ -63,3 +63,45 @@ Variáveis de ambiente principais (ver [`.env.example`](.env.example)): `EXPO_PU
 cd services/api
 pytest
 ```
+
+## Portal do cliente
+
+No menu **Portal do cliente**, o escritório seleciona um cliente com email e um processo associado:
+
+1. Criar um convite e partilhar o endereço e o código com esse cliente. O código é apresentado uma única vez e expira em 48 horas; a app não envia o convite por email.
+2. Escrever a atualização e escolher **Publicar no portal**. O cliente vê o título, referência, estado, responsável, atualização e conteúdo partilhado no portal. Notas, factos e documentos internos do caso não são publicados automaticamente.
+3. Pedir ou partilhar documentos, responder a mensagens e publicar valores com instruções de pagamento. Só o escritório confirma recebimentos; o portal não emite faturas nem processa pagamentos online.
+4. Usar **Retirar do portal** para ocultar um processo ou **Revogar acesso** para bloquear o cliente. Um novo convite invalida a palavra-passe e as sessões anteriores.
+
+O cliente abre `/portal?access=...`, escolhe **Ativar acesso** e define uma palavra-passe com pelo menos 10 caracteres. Nas visitas seguintes usa o mesmo endereço, email e palavra-passe. A sessão do portal é separada da sessão do escritório, expira em oito horas e não é guardada no navegador: recarregar ou fechar a página exige novo login. A recuperação de acesso faz-se com um novo convite do escritório.
+
+Documentos do portal: PDF, DOCX, XLSX, TXT, CSV, PNG e JPEG, até 25 MB. São guardados em `services/api/documents_storage/portal`, com permissões verificadas em cada descarga. A base SQLite e esta pasta precisam de armazenamento persistente e de cópias de segurança em conjunto.
+
+Para acesso externo, definir `EXPO_PUBLIC_API_URL` com a URL HTTPS da API antes de compilar, `EXPO_PUBLIC_PORTAL_URL` com a URL HTTPS completa da página `/portal` nos convites móveis e `LEXORA_CORS_ORIGINS` com a origem do site. A configuração está exemplificada em `.env.example`. Estas instruções não efetuam publicação do site.
+
+### Verificação do portal
+
+Testes da API, a partir da raiz:
+
+```bash
+python -m pytest services/api/tests/test_portal.py -q
+```
+
+O teste de navegador usa Playwright com Chrome e uma API isolada. Compilar a app web com a API local (`http://localhost:8000`) e sem substituir `EXPO_PUBLIC_PORTAL_URL`:
+
+```bash
+cd apps/mobile
+npx expo export --platform web --output-dir ../../work/portal-web
+cd ../..
+python services/api/tests/serve_portal_e2e.py
+```
+
+Noutro terminal, a partir da raiz:
+
+```bash
+node apps/mobile/scripts/verify-portal.cjs
+```
+
+Playwright deve estar disponível no ambiente Node; `PLAYWRIGHT_MODULE` permite indicar o caminho de uma instalação existente. As portas locais 8000 e 8765 devem estar livres. O servidor usa uma base e ficheiros temporários, removidos ao terminar normalmente; o teste verifica a identificação desse servidor antes de criar contas. As capturas ficam em `work/portal-check`.
+
+O percurso cobre convite, publicação, ativação, pedido e entrega de documento, descarga com conteúdo verificado, mensagem, recebimento, terminar e reiniciar sessão, persistência dos dados, revogação, largura móvel e erros de execução no navegador.

@@ -24,6 +24,7 @@ export const mockCases: LegalCase[] = [
     facts: [{ id: 'f1', statement: 'A entidade empregadora comunicou a cessação do contrato.', status: 'Confirmado', source: 'Utilizador', createdAt: '2026-08-20T09:00:00.000Z' }],
     legalIssues: [{ id: 'q1', title: 'Regularidade da cessação contratual', status: 'Em análise' }],
     missingFacts: [{ id: 'm1', question: 'Em que data foi recebida a comunicação?', impact: 'Pode alterar o cálculo do prazo aplicável.', resolved: false }],
+    collaboratorEmails: [],
   },
   {
     id: '2',
@@ -43,7 +44,7 @@ export const mockCases: LegalCase[] = [
     notes: [], tasks: [], documents: [],
     timeline: [{ id: 'e2', title: 'Caso concluído', date: '2026-08-28T09:00:00.000Z' }],
     entities: [{ id: 'p2', name: 'João Ferreira', role: 'Arrendatário', type: 'Pessoa' }],
-    facts: [], legalIssues: [], missingFacts: [],
+    facts: [], legalIssues: [], missingFacts: [], collaboratorEmails: [],
   },
   {
     id: '3',
@@ -63,6 +64,6 @@ export const mockCases: LegalCase[] = [
     notes: [], tasks: [], documents: [],
     timeline: [{ id: 'e3', title: 'Rascunho criado', date: '2026-08-26T09:00:00.000Z' }],
     entities: [{ id: 'p3', name: 'Ana Costa', role: 'Consumidora', type: 'Pessoa' }],
-    facts: [], legalIssues: [], missingFacts: [],
+    facts: [], legalIssues: [], missingFacts: [], collaboratorEmails: [],
   },
 ];

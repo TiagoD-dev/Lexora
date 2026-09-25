@@ -22,6 +22,7 @@ export function AppButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -50,7 +51,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   pressed: { opacity: 0.78 },
   disabled: { opacity: 0.45 },
   label: { fontSize: 15, fontWeight: '700' },
-  primaryLabel: { color: colors.white },
-  accentLabel: { color: colors.text },
+  primaryLabel: { color: colors.background },
+  accentLabel: { color: '#241512' },
   ghostLabel: { color: colors.primary },
 });

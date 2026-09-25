@@ -26,8 +26,8 @@ function UpdateCard({update,colors,styles}:{update:LegalUpdate;colors:ThemeColor
     <View style={[styles.symbol,{backgroundColor:icon.bg}]}><Text style={[styles.symbolText,{color:icon.fg}]}>{symbol}</Text></View>
     <View style={styles.copy}>
       <View style={styles.copyTop}><Text style={styles.kind}>{update.sourceKind.toLocaleUpperCase('pt-PT')} · {update.source.toLocaleUpperCase('pt-PT')}</Text>{update.official?<Text style={styles.official}>VERIFICADA</Text>:null}</View>
-      <Text style={styles.cardTitle}>{update.title}</Text>
-      <Text numberOfLines={3} style={styles.summary}>{update.summary}</Text>
+      <Text numberOfLines={2} style={styles.cardTitle}>{update.title}</Text>
+      <Text numberOfLines={1} style={styles.summary}>{update.summary}</Text>
       <Text style={styles.date}>{formatDate(update.publishedAt)}</Text>
     </View>
     <Text style={styles.chevron}>↗</Text>
@@ -52,17 +52,17 @@ const makeStyles=(colors:ThemeColors)=>StyleSheet.create({
   state:{alignItems:'center',gap:10,paddingVertical:60},
   stateText:{color:colors.textMuted,fontSize:12,textAlign:'center'},
   stateRetry:{color:colors.primary,fontSize:12,fontWeight:'800'},
-  list:{marginTop:22,gap:10},
-  card:{minHeight:100,flexDirection:'row',alignItems:'flex-start',padding:16,borderWidth:1,borderColor:colors.border,borderRadius:radius.xl,backgroundColor:colors.surface},
+  list:{marginTop:22,flexDirection:'row',flexWrap:'wrap',gap:10},
+  card:{flexGrow:1,flexBasis:280,minWidth:260,maxWidth:'100%',flexDirection:'row',alignItems:'flex-start',padding:12,borderWidth:1,borderColor:colors.border,borderRadius:radius.xl,backgroundColor:colors.surface},
   pressed:{opacity:.72},
-  symbol:{width:40,height:40,alignItems:'center',justifyContent:'center',borderRadius:radius.md},
-  symbolText:{fontSize:12,fontWeight:'900'},
-  copy:{flex:1,marginHorizontal:12},
+  symbol:{width:34,height:34,alignItems:'center',justifyContent:'center',borderRadius:radius.md},
+  symbolText:{fontSize:11,fontWeight:'900'},
+  copy:{flex:1,marginHorizontal:10},
   copyTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
   kind:{color:colors.accent,fontSize:8,fontWeight:'900',letterSpacing:.6},
   official:{color:colors.successText,fontSize:8,fontWeight:'900'},
-  cardTitle:{marginTop:5,color:colors.textStrong,fontSize:13,fontWeight:'700'},
-  summary:{marginTop:5,color:colors.textMuted,fontSize:11,lineHeight:16},
-  date:{marginTop:8,color:colors.textSoft,fontSize:9},
-  chevron:{marginTop:2,color:colors.primary,fontSize:16},
+  cardTitle:{marginTop:4,color:colors.textStrong,fontSize:13,fontWeight:'700'},
+  summary:{marginTop:3,color:colors.textMuted,fontSize:11,lineHeight:16},
+  date:{marginTop:6,color:colors.textSoft,fontSize:9},
+  chevron:{marginTop:2,color:colors.primary,fontSize:14},
 });

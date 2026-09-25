@@ -10,6 +10,7 @@ import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import { parseLocalDate } from '@/utils/deadlines';
 import { sendDelayEmail } from '@/services/notifications-service';
+import { Icon, type IconName } from '@/components/icon';
 
 export function TopNavigationActions() {
   const router = useRouter();
@@ -18,6 +19,10 @@ export function TopNavigationActions() {
   const { cases } = useCases();
   const { colors } = useAppTheme();
   const { width } = useWindowDimensions();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  // Match the static HTML until the first browser render has hydrated.
+  const responsiveReady = Platform.OS !== 'web' || mounted;
   const styles = makeStyles(colors);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -29,7 +34,7 @@ export function TopNavigationActions() {
     AsyncStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(next)).catch(() => undefined);
     return next;
   });
-  const showIdentity = width >= 720;
+  const showIdentity = responsiveReady && width >= 720;
   const initial = settings.displayName.trim().charAt(0).toUpperCase() || 'U';
   const now = new Date(); now.setHours(12, 0, 0, 0);
   const notifications = cases.flatMap((item) => item.tasks.map((task) => ({ task, caseId: item.id, caseTitle: item.title })))
@@ -71,25 +76,25 @@ export function TopNavigationActions() {
 
   return (
     <View style={styles.actions}>
-      <Pressable accessibilityLabel="Pesquisar casos e clientes" accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-        <Text style={styles.icon}>⌕</Text>
+      <Pressable accessibilityLabel="Pesquisar na app" accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+        <Icon name="magnify" size={20} color={colors.textMuted} />
       </Pressable>
 
       <Pressable accessibilityLabel={`${notificationCount} notificações de prazos`} accessibilityRole="button" onPress={() => setNotifOpen(true)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-        <Text style={styles.icon}>◉</Text>
+        <Icon name="bell-outline" size={20} color={colors.textMuted} />
         {notificationCount ? <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>{notificationCount > 9 ? '9+' : notificationCount}</Text></View> : null}
       </Pressable>
 
-      <Pressable accessibilityLabel="Definições" accessibilityRole="button" onPress={() => navigate('/profile')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-        <Text style={styles.settingsIcon}>⚙</Text>
-      </Pressable>
+      {responsiveReady && width >= 600 && <Pressable accessibilityLabel="Definições" accessibilityRole="button" onPress={() => navigate('/profile')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+        <Icon name="cog-outline" size={21} color={colors.textMuted} />
+      </Pressable>}
 
-      <View style={styles.separator} />
+      {responsiveReady && width >= 600 && <View style={styles.separator} />}
 
       <Pressable accessibilityLabel="Abrir menu do perfil" accessibilityRole="button" onPress={() => setMenuOpen(true)} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
         {showIdentity ? <View style={styles.identity}><Text numberOfLines={1} style={styles.name}>{settings.displayName}</Text><Text numberOfLines={1} style={styles.role}>{settings.professionalTitle || 'O meu perfil'}</Text></View> : null}
-        <Text style={styles.chevron}>⌄</Text>
+        <Icon name="chevron-down" size={18} color={colors.textSoft} />
       </Pressable>
 
       <Modal animationType="fade" onRequestClose={() => setMenuOpen(false)} transparent visible={menuOpen}>
@@ -100,9 +105,9 @@ export function TopNavigationActions() {
               <View style={styles.menuIdentity}><Text numberOfLines={1} style={styles.menuName}>{settings.displayName}</Text><Text numberOfLines={1} style={styles.menuEmail}>{settings.email}</Text></View>
             </View>
             <View style={styles.divider} />
-            <MenuItem symbol="○" label="Perfil" detail="Ver e editar os teus dados" onPress={() => navigate('/profile/edit')} styles={styles} />
-            <MenuItem symbol="◇" label="Planos" detail="Comparar funcionalidades e preços" onPress={() => navigate('/billing')} styles={styles} />
-            <MenuItem symbol="×" label="Terminar sessão" danger onPress={() => {
+            <MenuItem symbol="account-outline" label="Perfil" detail="Ver e editar os teus dados" onPress={() => navigate('/profile/edit')} styles={styles} />
+            <MenuItem symbol="credit-card-outline" label="Planos" detail="Comparar funcionalidades e preços" onPress={() => navigate('/billing')} styles={styles} />
+            <MenuItem symbol="logout" label="Terminar sessão" danger onPress={() => {
               setMenuOpen(false);
               logout().finally(() => {
                 if (Platform.OS === 'web') { window.location.href = '/login'; return; }
@@ -124,7 +129,7 @@ export function TopNavigationActions() {
               const seen = seenIds.includes(task.id);
               const detail = `${caseTitle} · ${days < 0 ? `Atrasada ${Math.abs(days)}d` : days === 0 ? 'Vence hoje' : `Vence em ${days}d`}`;
               return (
-                <MenuItem key={task.id} symbol={seen ? '✓' : '⏰'} label={task.title} detail={detail} danger={days < 0 && !seen} seen={seen}
+                <MenuItem key={task.id} symbol={seen ? 'check-circle-outline' : 'clock-alert-outline'} label={task.title} detail={detail} danger={days < 0 && !seen} seen={seen}
                   onPress={() => { markSeen(task.id); setNotifOpen(false); router.push({ pathname: '/cases/[id]', params: { id: caseId } }); }} styles={styles} />
               );
             }) : <Text style={styles.emptyNotif}>Sem notificações de prazos.</Text>}
@@ -135,8 +140,10 @@ export function TopNavigationActions() {
   );
 }
 
-function MenuItem({ symbol, label, detail, danger, seen, onPress, styles }: { symbol: string; label: string; detail?: string; danger?: boolean; seen?: boolean; onPress: () => void; styles: ReturnType<typeof makeStyles> }) {
-  return <Pressable accessibilityRole="menuitem" onPress={onPress} style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}><Text style={[styles.menuSymbol, danger && styles.danger, seen && styles.seen]}>{symbol}</Text><View style={styles.menuCopy}><Text style={[styles.menuLabel, danger && styles.danger, seen && styles.seen]}>{label}</Text>{detail ? <Text style={[styles.menuDetail, seen && styles.seen]}>{detail}</Text> : null}</View><Text style={[styles.menuArrow, danger && styles.danger]}>›</Text></Pressable>;
+function MenuItem({ symbol, label, detail, danger, seen, onPress, styles }: { symbol: IconName; label: string; detail?: string; danger?: boolean; seen?: boolean; onPress: () => void; styles: ReturnType<typeof makeStyles> }) {
+  const { colors } = useAppTheme();
+  const iconColor = danger ? colors.danger : seen ? colors.textSoft : colors.primary;
+  return <Pressable accessibilityRole="menuitem" onPress={onPress} style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}><View style={styles.menuSymbol}><Icon name={symbol} size={18} color={iconColor} /></View><View style={styles.menuCopy}><Text style={[styles.menuLabel, danger && styles.danger, seen && styles.seen]}>{label}</Text>{detail ? <Text style={[styles.menuDetail, seen && styles.seen]}>{detail}</Text> : null}</View><Icon name="chevron-right" size={18} color={danger ? colors.danger : colors.textSoft} /></Pressable>;
 }
 
 const SEEN_STORAGE_KEY = '@lexora/notifications/seen/v1';
@@ -144,26 +151,23 @@ const EMAILED_STORAGE_KEY = '@lexora/notifications/emailed/v1';
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   actions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 12 },
-  iconButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
-  icon: { color: colors.textMuted, fontSize: 19 },
-  settingsIcon: { color: colors.textMuted, fontSize: 20 },
-  notificationBadge: { position: 'absolute', top: 3, right: 2, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 2, borderColor: colors.background, borderRadius: 9, backgroundColor: colors.danger },
-  notificationBadgeText: { color: colors.white, fontSize: 7, fontWeight: '900' },
+  iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
+  notificationBadge: { position: 'absolute', top: 3, right: 2, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 2, borderColor: colors.background, borderRadius: 9, backgroundColor: colors.danger },
+  notificationBadgeText: { color: colors.white, fontSize: 12, fontWeight: '900' },
   separator: { width: 1, height: 28, marginHorizontal: 4, backgroundColor: colors.border },
   profileButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 5, borderRadius: radius.lg },
   avatar: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primary },
   avatarText: { color: colors.white, fontSize: 13, fontWeight: '900' },
   identity: { width: 104 },
-  name: { color: colors.textStrong, fontSize: 11, fontWeight: '800' },
+  name: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
   role: { marginTop: 1, color: colors.textSoft, fontSize: 9 },
-  chevron: { color: colors.textSoft, fontSize: 16 },
   pressed: { opacity: .6, backgroundColor: colors.surfaceMuted },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 58, paddingRight: 18, backgroundColor: 'rgba(5, 12, 25, 0.16)' },
   menu: { width: 288, padding: 10, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, backgroundColor: colors.surface, boxShadow: '0 8px 20px rgba(0,0,0,0.16)', elevation: 12 },
   menuHeader: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 9 },
   menuTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
-  emptyNotif: { padding: 14, color: colors.textSoft, fontSize: 11, textAlign: 'center' },
-  menuAvatar: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primaryLight },
+  emptyNotif: { padding: 14, color: colors.textSoft, fontSize: 12, textAlign: 'center' },
+  menuAvatar: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primaryLight },
   menuAvatarText: { color: colors.primary, fontSize: 15, fontWeight: '900' },
   menuIdentity: { flex: 1 },
   menuName: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
@@ -171,11 +175,11 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   divider: { height: 1, marginVertical: 7, backgroundColor: colors.border },
   menuItem: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 10, borderRadius: radius.md },
   menuItemPressed: { backgroundColor: colors.primaryLight },
-  menuSymbol: { width: 22, color: colors.primary, fontSize: 18, textAlign: 'center' },
+  menuSymbol: { width: 22, alignItems: 'center', justifyContent: 'center' },
   menuCopy: { flex: 1 },
   menuLabel: { color: colors.textStrong, fontSize: 12, fontWeight: '700' },
   menuDetail: { marginTop: 2, color: colors.textSoft, fontSize: 9 },
-  menuArrow: { color: colors.textSoft, fontSize: 19 },
   danger: { color: colors.danger },
   seen: { color: colors.textSoft },
 });
+

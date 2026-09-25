@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
 import { SelectField } from '@/components/select-field';
@@ -18,12 +19,14 @@ const priorities: CasePriority[] = ['Baixa', 'Normal', 'Alta', 'Urgente'];
 
 export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial<CaseFormValue>; submitLabel: string; onSubmit: (value: CaseFormValue) => void }) {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
+  const router = useRouter();
   const { clients } = useClients();
   const { settings } = useSettings();
   const availableClients = clients.filter((client) => client.status === 'Ativo' || client.id === initial?.clientId);
   const [value, setValue] = useState<CaseFormValue>({ title: '', client: '', clientId: undefined, area: 'Direito do Trabalho', court: '', processNumber: '', responsible: settings.displayName.trim(), priority: 'Normal', description: '', status: 'Rascunho', ...initial });
   const set = <K extends keyof CaseFormValue>(key: K, next: CaseFormValue[K]) => setValue((current) => ({ ...current, [key]: next }));
-  const valid = value.title.trim() && value.client.trim() && value.description.trim();
+  const missing = [!value.title.trim() && 'título', !value.client.trim() && 'cliente', !value.description.trim() && 'descrição'].filter((item): item is string => !!item);
+  const valid = missing.length === 0;
   const icon = hashTheme(colors, value.area || 'novo-caso');
   const priority = priorityTheme(colors, value.priority);
 
@@ -42,7 +45,11 @@ export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial
     <Text style={styles.sectionLabel}>ASSUNTO E CLIENTE</Text>
     <View style={styles.card}>
       <AppInput label="Título do caso *" value={value.title} onChangeText={(text) => set('title', text)} placeholder="Ex.: Cessação do contrato" />
-      {availableClients.length > 0 ? <SelectField label="Cliente *" value={value.client || 'Selecionar cliente'} options={availableClients.map((client) => client.name)} onChange={(name) => { const client = availableClients.find((item) => item.name === name); setValue((current) => ({ ...current, client: name, clientId: client?.id })); }} /> : <Text style={styles.helper}>Ainda não existem clientes. Cria primeiro uma ficha em Clientes.</Text>}
+      {availableClients.length > 0 ? <SelectField label="Cliente *" value={value.client || 'Selecionar cliente'} options={availableClients.map((client) => client.name)} onChange={(name) => { const client = availableClients.find((item) => item.name === name); setValue((current) => ({ ...current, client: name, clientId: client?.id })); }} /> : <View style={styles.field}>
+        <Text style={styles.label}>Cliente *</Text>
+        <Text style={styles.helper}>Ainda não existem clientes ativos. Cria primeiro uma ficha para poderes associar este caso.</Text>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/clients/new')} style={styles.secondaryButton}><Text style={styles.secondaryButtonText}>+ Criar cliente</Text></Pressable>
+      </View>}
       <SelectField label="Área jurídica" value={value.area} options={LEGAL_AREAS} onChange={(area) => set('area', area)} />
     </View>
 
@@ -68,6 +75,7 @@ export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial
     </View>
 
     <AppButton disabled={!valid} onPress={() => onSubmit({ ...value, title: value.title.trim(), client: value.client.trim(), court: value.court.trim() || 'Sem tribunal atribuído', description: value.description.trim() })}>{submitLabel}</AppButton>
+    {!valid && <Text accessibilityRole="alert" style={styles.warning}>Falta preencher: {missing.join(', ')}.</Text>}
   </View>;
 }
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
@@ -86,6 +94,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   field: { gap: 8 },
   label: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
   helper: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
+  secondaryButton: { alignSelf: 'flex-start', minHeight: 40, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1, borderColor: colors.primary, borderRadius: radius.pill },
+  secondaryButtonText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  warning: { marginTop: -4, color: colors.danger, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.pill, backgroundColor: colors.surface },
   active: { borderColor: colors.primary, backgroundColor: colors.primary },

@@ -75,8 +75,8 @@ export default function SourcesScreen() {
                   <View style={[styles.icon, { backgroundColor: icon.bg }]}><Text style={[styles.iconText, { color: icon.fg }]}>§</Text></View>
                   <View style={styles.copy}>
                     <Text style={styles.type}>{type}</Text>
-                    <Text style={styles.title}>{source.title}</Text>
-                    <Text numberOfLines={2} style={styles.detail}>{source.summary}</Text>
+                    <Text numberOfLines={1} style={styles.title}>{source.title}</Text>
+                    <Text numberOfLines={1} style={styles.detail}>{source.summary}</Text>
                   </View>
                   <Text style={styles.chevron}>›</Text>
                 </Pressable>
@@ -112,14 +112,14 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   state: { alignItems: 'center', gap: 10, paddingVertical: 40 },
   stateText: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
   stateRetry: { color: colors.primary, fontSize: 12, fontWeight: '800' },
-  list: { gap: 12 },
-  card: { minHeight: 92, flexDirection: 'row', alignItems: 'center', padding: 14, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, backgroundColor: colors.surface },
+  list: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  card: { flexGrow: 1, flexBasis: 280, minWidth: 260, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', padding: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, backgroundColor: colors.surface },
   pressed: { opacity: 0.7 },
-  icon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
-  iconText: { fontSize: 20, fontWeight: '700' },
-  copy: { flex: 1, marginHorizontal: 12 },
+  icon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
+  iconText: { fontSize: 16, fontWeight: '700' },
+  copy: { flex: 1, marginHorizontal: 10 },
   type: { color: colors.primary, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  title: { marginTop: 3, color: colors.textStrong, fontSize: 14, fontWeight: '700' },
-  detail: { marginTop: 4, color: colors.textMuted, fontSize: 11 },
-  chevron: { color: colors.textSoft, fontSize: 24 },
+  title: { marginTop: 3, color: colors.textStrong, fontSize: 13, fontWeight: '700' },
+  detail: { marginTop: 3, color: colors.textMuted, fontSize: 11 },
+  chevron: { color: colors.textSoft, fontSize: 20 },
 });

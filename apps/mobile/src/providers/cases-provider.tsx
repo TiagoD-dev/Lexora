@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useSyncedCollection } from '@/hooks/use-synced-collection';
+import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { addCollaboratorRemote, createCaseRemote, deleteCaseRemote, listCasesRemote, removeCollaboratorRemote, updateCaseRemote } from '@/services/cases-service';
@@ -9,7 +9,7 @@ import { cancelTaskReminders, scheduleTaskReminders } from '@/utils/task-notific
 
 type CaseDraft = Pick<LegalCase, 'title' | 'client' | 'clientId' | 'area' | 'court' | 'processNumber' | 'responsible' | 'priority' | 'description' | 'status'>;
 type CasesContextValue = {
-  cases: LegalCase[]; hydrated: boolean; getCase: (id: string) => LegalCase | undefined;
+  cases: LegalCase[]; hydrated: boolean; syncStatus: 'saving' | 'saved' | 'error'; syncError: string | null; retrySync: () => void; getCase: (id: string) => LegalCase | undefined;
   createCase: (draft: CaseDraft) => string; updateCase: (id: string, patch: Partial<CaseDraft>) => void;
   archiveCase: (id: string) => void; deleteCase: (id: string) => void;
   syncClientName: (clientId: string, name: string) => void;
@@ -24,7 +24,7 @@ type CasesContextValue = {
   addCollaborator: (caseId: string, email: string) => Promise<void>; removeCollaborator: (caseId: string, email: string) => Promise<void>;
 };
 const CasesContext = createContext<CasesContextValue | null>(null);
-const STORAGE_KEY = '@lexora/cases-cache/v1';
+const STORAGE_KEY = '@lexora/cases-cache/v2';
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const trunc = (text: string, max = 60) => (text.length > max ? `${text.slice(0, max)}…` : text);
 const safeDate = (value: unknown, fallback: string) =>
@@ -61,27 +61,13 @@ function normalizeCase(item: Partial<LegalCase>): LegalCase {
 }
 
 export function CasesProvider({ children }: { children: ReactNode }) {
-  const { user, hydrated: authHydrated } = useAuth();
-  const [cases, setCases] = useState<LegalCase[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    if (!authHydrated) return;
-    if (!user) { setCases([]); setHydrated(true); return; }
-    let cancelled = false;
-    setHydrated(false);
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
-      if (cancelled || !raw) return;
-      try { const cached: unknown = JSON.parse(raw); if (Array.isArray(cached)) setCases(cached.map((item) => normalizeCase(item))); } catch { /* cache inválida */ }
-    }).catch(() => undefined);
-    listCasesRemote()
-      .then((remote) => { if (!cancelled) setCases(remote.map((item) => normalizeCase(item))); })
-      .catch(() => undefined)
-      .finally(() => { if (!cancelled) setHydrated(true); });
-    return () => { cancelled = true; };
-  }, [user, authHydrated]);
-
-  useEffect(() => { if (hydrated && user) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(cases)).catch(() => undefined); }, [cases, hydrated, user]);
+  const { user } = useAuth();
+  const activeUser = useRef(user?.id);
+  useLayoutEffect(() => { activeUser.current = user?.id; }, [user?.id]);
+  const { items: cases, setItems: setCases, hydrated, syncStatus, syncError, retrySync, enqueue } = useSyncedCollection<LegalCase>({
+    userId: user?.id ?? null, storageKey: STORAGE_KEY, loadRemote: listCasesRemote, normalize: normalizeCase,
+    createRemote: createCaseRemote, updateRemote: updateCaseRemote, deleteRemote: deleteCaseRemote,
+  });
 
   // Envia ao servidor apenas os campos que a mutação alterou de facto (por identidade de referência),
   // nunca o caso inteiro — assim uma cópia local desatualizada nunca apaga campos que não tocou.
@@ -92,32 +78,40 @@ export function CasesProvider({ children }: { children: ReactNode }) {
       patch[key] = after[key];
     });
     if (Object.keys(patch).length === 0) return;
-    updateCaseRemote(after.id, patch).catch(() => undefined);
+    enqueue({ kind: 'update', id: after.id, patch });
   };
-  const mutate = (id: string, recipe: (item: LegalCase) => LegalCase) => setCases((all) => all.map((item) => {
-    if (item.id !== id) return item;
-    const next = recipe(item);
-    syncCase(item, next);
-    return next;
-  }));
+  const mutate = (id: string, recipe: (item: LegalCase) => LegalCase) => {
+    let change: { before: LegalCase; after: LegalCase } | undefined;
+    setCases((all) => all.map((item) => {
+      if (item.id !== id) return item;
+      const next = recipe(item);
+      change = { before: item, after: next };
+      return next;
+    }));
+    if (change) syncCase(change.before, change.after);
+  };
   const touch = (item: LegalCase) => ({ ...item, updatedAt: new Date().toISOString() });
   const createCase = (draft: CaseDraft) => {
     const id = uid(); const now = new Date().toISOString();
     const sequence = String(cases.length + 1).padStart(3, '0');
     const item: LegalCase = { id, reference: `LEX-${new Date().getFullYear()}-${sequence}`, ...draft, createdAt: now, updatedAt: now, notes: [], tasks: [], documents: [], timeline: [{ id: uid(), title: 'Caso criado', date: now }], entities: [{ id: uid(), name: draft.client, role: 'Cliente', type: 'Pessoa' }], facts: [], legalIssues: [], missingFacts: [], collaboratorEmails: [] };
     setCases((all) => [item, ...all]);
-    createCaseRemote(item).catch(() => undefined);
+    enqueue({ kind: 'create', item });
     return id;
   };
   const updateCase = (id: string, patch: Partial<CaseDraft>) => mutate(id, (item) => touch({ ...item, ...patch, timeline: [{ id: uid(), title: 'Dados do caso atualizados', date: new Date().toISOString() }, ...item.timeline] }));
   const archiveCase = (id: string) => updateCase(id, { status: 'Arquivado' as CaseStatus });
-  const deleteCase = (id: string) => { setCases((all) => all.filter((item) => item.id !== id)); deleteCaseRemote(id).catch(() => undefined); };
-  const syncClientName = (clientId: string, name: string) => setCases((all) => all.map((item) => {
-    if (item.clientId !== clientId) return item;
-    const next = touch({ ...item, client: name, entities: item.entities.map((entity) => entity.role === 'Cliente' ? { ...entity, name } : entity) });
-    syncCase(item, next);
-    return next;
-  }));
+  const deleteCase = (id: string) => { setCases((all) => all.filter((item) => item.id !== id)); enqueue({ kind: 'delete', id }); };
+  const syncClientName = (clientId: string, name: string) => {
+    const changes: { before: LegalCase; after: LegalCase }[] = [];
+    setCases((all) => all.map((item) => {
+      if (item.clientId !== clientId) return item;
+      const next = touch({ ...item, client: name, entities: item.entities.map((entity) => entity.role === 'Cliente' ? { ...entity, name } : entity) });
+      changes.push({ before: item, after: next });
+      return next;
+    }));
+    changes.forEach(({ before, after }) => syncCase(before, after));
+  };
   const addNote = (id: string, text: string) => mutate(id, (item) => touch({ ...item, notes: [{ id: uid(), text, createdAt: new Date().toISOString() } as CaseNote, ...item.notes], timeline: [{ id: uid(), title: `Nota adicionada: ${trunc(text)}`, date: new Date().toISOString() }, ...item.timeline] }));
   const addTask = (id: string, task: { title: string; description?: string; dueDate?: string; priority?: TaskPriority; deadlineKind?: DeadlineKind; recurrence?: RecurrenceRule; reminderDays?: number[] }) => {
     let created: CaseTask | undefined;
@@ -178,14 +172,14 @@ export function CasesProvider({ children }: { children: ReactNode }) {
     return touch({ ...item, missingFacts: item.missingFacts.map((entry) => entry.id === missingFactId ? { ...entry, resolved } : entry), timeline: resolved ? [{ id: uid(), title: `Pergunta resolvida: ${fact.question}`, date: new Date().toISOString() }, ...item.timeline] : item.timeline });
   });
   const addCollaborator = async (caseId: string, email: string) => {
-    const updated = await addCollaboratorRemote(caseId, email);
+    const owner = user?.id; const updated = await addCollaboratorRemote(caseId, email); if (owner !== activeUser.current) return;
     setCases((all) => all.map((item) => item.id === caseId ? { ...item, collaboratorEmails: updated.collaboratorEmails } : item));
   };
   const removeCollaborator = async (caseId: string, email: string) => {
-    const updated = await removeCollaboratorRemote(caseId, email);
+    const owner = user?.id; const updated = await removeCollaboratorRemote(caseId, email); if (owner !== activeUser.current) return;
     setCases((all) => all.map((item) => item.id === caseId ? { ...item, collaboratorEmails: updated.collaboratorEmails } : item));
   };
-  const value = { cases, hydrated, getCase: (id: string) => cases.find((item) => item.id === id), createCase, updateCase, archiveCase, deleteCase, syncClientName, addNote, addTask, updateTask, deleteTask, toggleTask, addDocument, updateDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact, addCollaborator, removeCollaborator };
+  const value = { cases, hydrated, syncStatus, syncError, retrySync, getCase: (id: string) => cases.find((item) => item.id === id), createCase, updateCase, archiveCase, deleteCase, syncClientName, addNote, addTask, updateTask, deleteTask, toggleTask, addDocument, updateDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact, addCollaborator, removeCollaborator };
   return <CasesContext.Provider value={value}>{children}</CasesContext.Provider>;
 }
 

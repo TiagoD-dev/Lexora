@@ -43,8 +43,8 @@ export function useIsOffline(): boolean {
   );
 }
 
-// ponytail: cache "last known good response" sem TTL/expiração e sem fila de sync — só leitura em
-// modo offline. Adicionar expiração/invalidação se os dados ficarem visivelmente desatualizados.
+// Cache apenas para pedidos públicos; dados autenticados usam cache por conta nos providers.
+// Nunca ler respostas privadas guardadas pela versão anterior nesta cache global.
 async function getCachedResponse<T>(path: string): Promise<T | undefined> {
   try {
     const raw = await AsyncStorage.getItem(`${CACHE_PREFIX}${path}`);
@@ -57,6 +57,41 @@ async function setCachedResponse(path: string, payload: unknown): Promise<void> 
   try { await AsyncStorage.setItem(`${CACHE_PREFIX}${path}`, JSON.stringify(payload)); } catch { /* cache indisponível */ }
 }
 
+const REQUEST_TIMEOUT_MS = 15_000;
+const RETRY_DELAYS_MS = [500, 1500];
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// ponytail: uma única política fixa (2 tentativas, 500ms/1500ms) para todo o cliente, só para
+// falhas de rede/timeout e 5xx — 4xx nunca é repetido. Adicionar config por pedido se algum
+// endpoint precisar de comportamento diferente.
+async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, options);
+      if (response.status >= 500 && attempt < RETRY_DELAYS_MS.length) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      if (attempt < RETRY_DELAYS_MS.length) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const isGet = (options.method ?? 'GET').toUpperCase() === 'GET';
   const token = await getStoredToken();
@@ -64,9 +99,9 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (token) headers.Authorization = `Bearer ${token}`;
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, { ...options, headers });
+    response = await fetchWithRetry(`${API_URL}${path}`, { ...options, headers });
   } catch (error) {
-    if (isGet) {
+    if (isGet && !token) {
       const cached = await getCachedResponse<T>(path);
       if (cached !== undefined) { setOffline(true); return cached; }
     }
@@ -83,6 +118,6 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
       : 'Ocorreu um erro ao comunicar com o servidor.';
     throw new ApiError(message, response.status);
   }
-  if (isGet) setCachedResponse(path, payload).catch(() => undefined);
+  if (isGet && !token) setCachedResponse(path, payload).catch(() => undefined);
   return payload as T;
 }

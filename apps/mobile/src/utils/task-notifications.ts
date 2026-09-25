@@ -31,11 +31,11 @@ export async function scheduleTaskReminders(task: CaseTask, caseTitle: string) {
   const granted = await ensurePermission();
   if (!granted) return;
 
-  const schedule = async (suffix: string, fireDate: Date, body: string) => {
+  const schedule = async (suffix: string, fireDate: Date, title: string, body: string) => {
     if (fireDate.getTime() <= Date.now()) return;
     await Notifications.scheduleNotificationAsync({
       identifier: notificationId(task.id, suffix),
-      content: { title: `Prazo: ${task.title}`, body: `${caseTitle} · ${body}` },
+      content: { title, body: `${caseTitle} · ${body}` },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireDate },
     });
   };
@@ -44,14 +44,20 @@ export async function scheduleTaskReminders(task: CaseTask, caseTitle: string) {
     const fireDate = new Date(due);
     fireDate.setDate(fireDate.getDate() - daysBefore);
     fireDate.setHours(9, 0, 0, 0);
-    await schedule(String(daysBefore), fireDate, daysBefore === 0 ? 'Vence hoje' : `Vence em ${daysBefore} dia(s)`);
+    await schedule(String(daysBefore), fireDate, `Prazo: ${task.title}`, daysBefore === 0 ? 'Vence hoje' : `Vence em ${daysBefore} dia(s)`);
   }
 
   const dueAt9 = new Date(due);
   dueAt9.setHours(9, 0, 0, 0);
-  await schedule('due', dueAt9, 'Vence hoje');
+  await schedule('due', dueAt9, `Prazo: ${task.title}`, 'Vence hoje');
 
-  if (__DEV__) console.log(`[task-notifications] agendados ${task.reminderDays.length + 1} lembretes para "${task.title}"`);
+  // Dispara à meia-noite do dia seguinte ao prazo, assim que a tarefa passa a estar em atraso.
+  const overdueAt = new Date(due);
+  overdueAt.setDate(overdueAt.getDate() + 1);
+  overdueAt.setHours(0, 0, 0, 0);
+  await schedule('overdue', overdueAt, `Tarefa em atraso: ${task.title}`, 'O prazo já passou e a tarefa continua por concluir.');
+
+  if (__DEV__) console.log(`[task-notifications] agendados ${task.reminderDays.length + 2} lembretes para "${task.title}"`);
 }
 
 export async function cancelTaskReminders(taskId: string) {

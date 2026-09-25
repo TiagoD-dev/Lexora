@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#12372A",
+        "backgroundColor": "#7A1620",
         "foregroundImage": "./assets/images/lexora-adaptive.png"
       },
       "predictiveBackGestureEnabled": false
@@ -26,12 +26,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#12372A",
+          "backgroundColor": "#7A1620",
           "image": "./assets/images/lexora-adaptive.png",
           "imageWidth": 112
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
