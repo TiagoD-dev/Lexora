@@ -10,6 +10,7 @@ import { LEGAL_AREAS } from '@/constants/legal-areas';
 import { useClients } from '@/providers/clients-provider';
 import { useSettings } from '@/providers/settings-provider';
 import { useAppTheme } from '@/providers/theme-provider';
+import { useConflictCheck } from '@/services/conflicts-service';
 import { radius, type ThemeColors } from '@/theme';
 import type { CasePriority, CaseStatus, LegalCase } from '@/types/case';
 import { hashTheme } from '@/utils/palette';
@@ -20,13 +21,16 @@ const statuses: CaseStatus[] = ['Rascunho', 'Em análise', 'Concluído'];
 const statusIcon: Record<CaseStatus, IconName> = { Rascunho: 'pencil-outline', 'Em análise': 'magnify', Concluído: 'check-circle-outline', Arquivado: 'archive-outline' };
 const priorities: CasePriority[] = ['Baixa', 'Normal', 'Alta', 'Urgente'];
 
-export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial<CaseFormValue>; submitLabel: string; onSubmit: (value: CaseFormValue) => void }) {
+export function CaseForm({ initial, submitLabel, onSubmit, askOpposingParty = false }: { initial?: Partial<CaseFormValue>; submitLabel: string; onSubmit: (value: CaseFormValue, opposingParty: string) => void; askOpposingParty?: boolean }) {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
   const router = useRouter();
   const { clients } = useClients();
   const { settings } = useSettings();
   const availableClients = clients.filter((client) => client.status === 'Ativo' || client.id === initial?.clientId);
   const [value, setValue] = useState<CaseFormValue>({ title: '', client: '', clientId: undefined, area: 'Direito do Trabalho', court: '', processNumber: '', responsible: settings.displayName.trim(), priority: 'Normal', description: '', status: 'Rascunho', ...initial });
+  const [opposingParty, setOpposingParty] = useState('');
+  const clientConflicts = useConflictCheck(value.client, clients.find((client) => client.id === value.clientId)?.nif).cases;
+  const opposingConflicts = useConflictCheck(opposingParty).clients;
   const set = <K extends keyof CaseFormValue>(key: K, next: CaseFormValue[K]) => setValue((current) => ({ ...current, [key]: next }));
   const missing = [!value.title.trim() && 'título', !value.client.trim() && 'cliente', !value.description.trim() && 'descrição'].filter((item): item is string => !!item);
   const valid = missing.length === 0;
@@ -57,6 +61,9 @@ export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial
         </View>}
         <SelectField label="Área jurídica" value={value.area} options={LEGAL_AREAS} onChange={(area) => set('area', area)} />
       </FormRow>
+      {clientConflicts.length > 0 && <Text accessibilityRole="alert" style={styles.conflict}>Possível conflito de interesses: o cliente figura como parte contrária em {clientConflicts.map((item) => `${item.reference} (${item.title})`).join(', ')}.</Text>}
+      {askOpposingParty && <AppInput label="Parte contrária" value={opposingParty} onChangeText={setOpposingParty} placeholder="Opcional" />}
+      {opposingConflicts.length > 0 && <Text accessibilityRole="alert" style={styles.conflict}>Possível conflito de interesses: a parte contrária é cliente do escritório ({opposingConflicts.map((item) => item.name).join(', ')}).</Text>}
     </FormSection>
 
     <FormSection step={2} icon="scale-balance" title="Tribunal e processo" hint="Opcional — podes completar mais tarde." done={!!value.court.trim() && !!value.processNumber.trim()}>
@@ -79,7 +86,7 @@ export function CaseForm({ initial, submitLabel, onSubmit }: { initial?: Partial
       </View>
     </FormSection>
 
-    <AppButton disabled={!valid} onPress={() => onSubmit({ ...value, title: value.title.trim(), client: value.client.trim(), court: value.court.trim() || 'Sem tribunal atribuído', description: value.description.trim() })}>{submitLabel}</AppButton>
+    <AppButton disabled={!valid} onPress={() => onSubmit({ ...value, title: value.title.trim(), client: value.client.trim(), court: value.court.trim() || 'Sem tribunal atribuído', description: value.description.trim() }, opposingParty.trim())}>{submitLabel}</AppButton>
   </View>;
 }
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
@@ -99,6 +106,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   secondaryButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.primary, borderRadius: radius.pill },
   secondaryButtonText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
   description: { minHeight: 150 },
+  conflict: { padding: 12, borderRadius: radius.md, backgroundColor: colors.warningBackground, color: colors.warningText, fontSize: 12, lineHeight: 18 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.pill, backgroundColor: colors.surface },
   dot: { width: 8, height: 8, borderRadius: 4 },

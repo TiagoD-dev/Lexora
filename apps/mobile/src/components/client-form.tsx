@@ -5,6 +5,7 @@ import { AppInput } from '@/components/app-input';
 import { ChoiceCard, FormProgress, FormRow, FormSection } from '@/components/form-section';
 import { Icon } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
+import { useConflictCheck } from '@/services/conflicts-service';
 import { radius, type ThemeColors } from '@/theme';
 import type { ClientDraft, ClientStatus } from '@/types/client';
 import { hashTheme } from '@/utils/palette';
@@ -21,6 +22,7 @@ export function ClientForm({ initial, submitLabel, onSubmit }: { initial?: Parti
   const initials = value.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
   const theme = hashTheme(colors, value.name || 'novo-cliente');
   const contact = value.email.trim() || value.phone.trim();
+  const conflicts = useConflictCheck(value.name, value.nif).cases;
 
   return <View style={styles.form}>
     <View style={styles.hero}>
@@ -48,6 +50,7 @@ export function ClientForm({ initial, submitLabel, onSubmit }: { initial?: Parti
         <AppInput label={isCompany ? 'Denominação social *' : 'Nome completo *'} value={value.name} onChangeText={(text) => set('name', text)} placeholder={isCompany ? 'Ex.: Lexora, Lda.' : 'Nome do cliente'} />
         <AppInput label={isCompany ? 'NIPC' : 'NIF'} value={value.nif} onChangeText={(text) => set('nif', text)} placeholder="Opcional" keyboardType="number-pad" />
       </FormRow>
+      {conflicts.length > 0 && <Text accessibilityRole="alert" style={styles.conflict}>Possível conflito de interesses: figura como parte contrária em {conflicts.map((item) => `${item.reference} (${item.title})`).join(', ')}.</Text>}
     </FormSection>
 
     <FormSection step={2} icon="card-account-phone-outline" title="Contacto" hint="Indica pelo menos um email ou telefone." done={hasContact}>
@@ -83,6 +86,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   statusText: { color: colors.successText, fontSize: 10, fontWeight: '800' },
   statusTextInactive: { color: colors.textMuted },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  conflict: { padding: 12, borderRadius: radius.md, backgroundColor: colors.warningBackground, color: colors.warningText, fontSize: 12, lineHeight: 18 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.pill, backgroundColor: colors.surface },
   chipText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
