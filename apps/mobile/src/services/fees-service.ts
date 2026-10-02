@@ -1,6 +1,6 @@
 import { apiFetch } from './api-client';
 
-export type FeeEntry = { id: string; caseId: string | null; kind: string; client: string; description: string; amount: number; hours: number | null; vat: string; dueDate: string; paid: boolean; createdAt: string };
+export type FeeEntry = { id: string; caseId: string | null; kind: string; client: string; description: string; amount: number; hours: number | null; workDate: string | null; vat: string; dueDate: string; paid: boolean; createdAt: string };
 export type NewFeeEntry = Omit<FeeEntry, 'id' | 'paid' | 'createdAt'>;
 
 export function listFeesRemote(): Promise<FeeEntry[]> {

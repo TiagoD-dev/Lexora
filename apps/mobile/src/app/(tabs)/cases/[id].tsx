@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
@@ -19,14 +19,17 @@ import { radius, type ThemeColors } from '@/theme';
 import { openDocument } from '@/utils/documents';
 import { confirmDestructive } from '@/utils/confirm-action';
 import { EMAIL_TEMPLATES, fillEmailTemplate } from '@/constants/email-templates';
-import { DOCUMENT_TEMPLATES, buildTemplateValues, fillDocumentTemplate } from '@/constants/document-templates';
+import { DOCUMENT_TEMPLATES, buildTemplateValues, fillDocumentTemplate, missingTemplateFields } from '@/constants/document-templates';
 import { sendClientEmail } from '@/services/notifications-service';
 import { fetchSimilarCases } from '@/services/similar-cases-service';
+import { createFeeRemote, listFeesRemote, type FeeEntry, type NewFeeEntry } from '@/services/fees-service';
+import { FeeEntryForm, formatHours } from '@/components/fee-entry-form';
+import { euros } from '@/components/business-preview';
 import type { SimilarCase } from '@/types/similar-case';
 import type { CaseEntity, TimelineEvent } from '@/types/case';
-import { toLocalDate } from '@/utils/deadlines';
+import { parseLocalDate, toLocalDate } from '@/utils/deadlines';
 
-type Panel = 'overview' | 'facts' | 'intelligence' | 'notes' | 'tasks' | 'documents' | 'timeline' | 'jurisprudencia' | 'templates';
+type Panel = 'overview' | 'facts' | 'intelligence' | 'notes' | 'tasks' | 'documents' | 'timeline' | 'jurisprudencia' | 'templates' | 'hours';
 export default function CaseDetailScreen() {
   const { id, panel: requestedPanel, focusId } = useLocalSearchParams<{ id: string; panel?: string; focusId?: string }>(); const router = useRouter();
   const { getCase, archiveCase, deleteCase, addNote, addTask, toggleTask, addDocument, deleteDocument, addFact, updateFactStatus, addEntity, addLegalIssue, addMissingFact, toggleMissingFact, addCollaborator, removeCollaborator } = useCases(); const { threads, createThread } = useAssistant(); const { getClient } = useClients(); const { user } = useAuth(); const { colors } = useAppTheme(); const styles = makeStyles(colors); const item = getCase(id);
@@ -37,12 +40,19 @@ export default function CaseDetailScreen() {
   const [collaboratorEmail, setCollaboratorEmail] = useState(''); const [sharing, setSharing] = useState(false);
   const [similarCases, setSimilarCases] = useState<SimilarCase[] | null>(null); const [similarLoading, setSimilarLoading] = useState(false); const [similarError, setSimilarError] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState(DOCUMENT_TEMPLATES[0].id);
+  const [caseFees, setCaseFees] = useState<FeeEntry[] | null>(null); const [feesError, setFeesError] = useState(''); const [loggingTime, setLoggingTime] = useState(false);
   const scrollRef = useRef<ScrollView>(null); const emailY = useRef(0);
   useEffect(() => {
     if (panel !== 'jurisprudencia' || similarCases !== null || similarLoading) return;
     setSimilarLoading(true); setSimilarError(false);
     fetchSimilarCases(id).then(setSimilarCases).catch(() => setSimilarError(true)).finally(() => setSimilarLoading(false));
   }, [panel, id, similarCases, similarLoading]);
+  useEffect(() => { setCaseFees(null); setFeesError(''); setLoggingTime(false); }, [id]);
+  useEffect(() => {
+    if (panel !== 'hours' || caseFees !== null) return;
+    // ponytail: filtra no cliente a lista completa de honorários; acrescentar ?caseId= no GET /fees se a lista crescer muito.
+    listFeesRemote().then((list) => setCaseFees(list.filter((fee) => fee.caseId === id))).catch((error) => { setCaseFees([]); setFeesError(error instanceof Error ? error.message : 'Não foi possível carregar os honorários.'); });
+  }, [panel, id, caseFees]);
   if (!item) return <SafeAreaView style={styles.screen}><ScreenHeader title="Caso não encontrado" /><View style={styles.center}><Text style={styles.muted}>Este caso já não está disponível.</Text></View></SafeAreaView>;
   const remove = () => Alert.alert('Eliminar caso?', 'Esta ação remove o registo deste dispositivo.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Eliminar', style: 'destructive', onPress: () => { deleteCase(id); router.replace('/cases'); } }]);
   const clientEmail = (item.clientId ? getClient(item.clientId)?.email : '') || '';
@@ -72,9 +82,10 @@ export default function CaseDetailScreen() {
     setSharing(true);
     try { await addCollaborator(id, email); setCollaboratorEmail(''); } catch { Alert.alert('Erro', 'Não foi possível partilhar o caso.'); } finally { setSharing(false); }
   };
-  const templateValues = buildTemplateValues(item, item.clientId ? getClient(item.clientId) : undefined, user?.displayName ?? '');
+  const templateValues = buildTemplateValues(item, item.clientId ? getClient(item.clientId) : undefined, user);
   const selectedTemplate = DOCUMENT_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? DOCUMENT_TEMPLATES[0];
   const filledTemplate = fillDocumentTemplate(selectedTemplate.body, templateValues);
+  const templateMissing = missingTemplateFields(filledTemplate);
   const openAssistant = (prompt?: string) => { const threadId = threads.find((thread) => thread.caseId === id)?.id ?? createThread(id); router.push({ pathname: '/assistant/[caseId]' as never, params: { caseId: id, threadId, ...(prompt ? { prompt } : {}) } } as never); };
   const openMissing = item.missingFacts.filter((fact) => !fact.resolved);
   const today = toLocalDate();
@@ -84,12 +95,23 @@ export default function CaseDetailScreen() {
     setEmailBody(`Caro(a) ${item.client},\n\nPara darmos seguimento ao processo ${item.reference}, precisamos que nos envie:\n\n${openMissing.map((fact) => `• ${fact.question}`).join('\n')}\n\nCom os melhores cumprimentos,\n${user?.displayName ?? ''}`);
     scrollRef.current?.scrollTo({ y: emailY.current, animated: true });
   };
-  const shareTemplate = () => { Share.share({ title: selectedTemplate.label, message: filledTemplate }).catch(() => Alert.alert('Erro', 'Não foi possível partilhar o documento.')); };
+  const saveTimeEntry = async (fee: NewFeeEntry) => {
+    try { const created = await createFeeRemote(fee); setCaseFees((current) => created.caseId === id ? [...(current ?? []), created] : current); setLoggingTime(false); setFeesError(''); }
+    catch (error) { setFeesError(error instanceof Error ? error.message : 'Não foi possível guardar o registo.'); }
+  };
+  const timeEntries = (caseFees ?? []).filter((fee) => fee.kind === 'Tempo');
+  const totalHours = timeEntries.reduce((sum, fee) => sum + (fee.hours ?? 0), 0);
+  const unpaidFees = (caseFees ?? []).filter((fee) => !fee.paid).reduce((sum, fee) => sum + fee.amount, 0);
+  const shareTemplate = () => {
+    // O Share do react-native-web depende de navigator.share; no browser copiamos para a área de transferência.
+    if (Platform.OS === 'web' && navigator.clipboard) { navigator.clipboard.writeText(filledTemplate).then(() => window.alert('Texto do documento copiado.'), () => window.alert('Não foi possível copiar o documento.')); return; }
+    Share.share({ title: selectedTemplate.label, message: filledTemplate }).catch(() => Alert.alert('Erro', 'Não foi possível partilhar o documento.'));
+  };
   return <SafeAreaView edges={['top']} style={styles.screen}><View style={styles.wrap}><ScreenHeader title={item.title} subtitle={`${item.client} · ${item.area}`} actionLabel="Editar" onActionPress={() => router.push({ pathname: '/cases/edit/[id]', params: { id } })} />
     <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <OfflineBanner />
       <View style={styles.hero}><View style={styles.heroTop}><Text style={styles.ref}>{item.reference}</Text><StatusBadge status={item.status} /></View><Text style={styles.heroTitle}>{item.title}</Text><Text style={styles.heroText}>{item.description}</Text><View style={styles.metaRow}><Meta label="Cliente" value={item.client} styles={styles} /><Meta label="Prioridade" value={item.priority} styles={styles} /><Meta label="Responsável" value={item.responsible} styles={styles} /></View></View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>{(['overview','facts','intelligence','notes','tasks','documents','timeline','jurisprudencia','templates'] as Panel[]).map((tab) => <Pressable key={tab} onPress={() => { setPanel(tab); setEntry(''); }} style={[styles.tab, panel === tab && styles.tabActive]}><Text style={[styles.tabText, panel === tab && styles.tabTextActive]}>{({ overview:'Resumo', facts:`Factos (${item.facts.length})`, intelligence:'Inteligência', notes:`Notas (${item.notes.length})`, tasks:`Tarefas (${item.tasks.length})`, documents:`Documentos (${item.documents.length})`, timeline:'Cronologia', jurisprudencia:'Jurisprudência', templates:'Modelos' })[tab]}</Text></Pressable>)}</ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>{(['overview','facts','intelligence','notes','tasks','documents','timeline','jurisprudencia','templates','hours'] as Panel[]).map((tab) => <Pressable key={tab} onPress={() => { setPanel(tab); setEntry(''); }} style={[styles.tab, panel === tab && styles.tabActive]}><Text style={[styles.tabText, panel === tab && styles.tabTextActive]}>{({ overview:'Resumo', facts:`Factos (${item.facts.length})`, intelligence:'Inteligência', notes:`Notas (${item.notes.length})`, tasks:`Tarefas (${item.tasks.length})`, documents:`Documentos (${item.documents.length})`, timeline:'Cronologia', jurisprudencia:'Jurisprudência', templates:'Modelos', hours:'Horas' })[tab]}</Text></Pressable>)}</ScrollView>
       {panel === 'overview' && (openMissing.length > 0 || overdue.length > 0) && <View style={styles.critical}>
         <View style={styles.sectionHead}><Icon name="alert-decagram-outline" size={20} color={colors.warningText} /><Text style={[styles.sectionTitle, { color: colors.warningText }]}>Pendências Críticas</Text></View>
         {overdue.map((task) => <View key={task.id} style={styles.criticalItem}><Text style={[styles.criticalLabel, { color: colors.danger }]}>PRAZO EM ATRASO · {task.dueDate}</Text><Text style={styles.criticalText}>{task.title}</Text></View>)}
@@ -119,7 +141,15 @@ export default function CaseDetailScreen() {
       {panel === 'notes' && <Collection title="Notas do caso" styles={styles}>{item.notes.length === 0 && <Text style={styles.muted}>Ainda não existem notas.</Text>}{[...item.notes].sort((a,b) => Number(b.id === focusId) - Number(a.id === focusId)).map((note) => <View key={note.id} style={note.id === focusId ? styles.searchMatch : undefined}>{note.id === focusId && <Text style={styles.searchMatchLabel}>Resultado da pesquisa</Text>}<Row title={note.text} caption={formatDate(note.createdAt)} symbol="note-text-outline" styles={styles} /></View>)}<Entry value={entry} setValue={setEntry} placeholder="Escrever uma nota…" action="Adicionar nota" onAdd={() => { if(entry.trim()) { addNote(id, entry.trim()); setEntry(''); } }} /></Collection>}
       {panel === 'tasks' && <Collection title="Tarefas e prazos" styles={styles}>{item.tasks.length === 0 && <Text style={styles.muted}>Ainda não existem tarefas.</Text>}{[...item.tasks].sort((a,b) => Number(b.id === focusId) - Number(a.id === focusId)).map((task) => <Pressable key={task.id} style={task.id === focusId ? styles.searchMatch : undefined} onPress={() => toggleTask(id, task.id)}>{task.id === focusId && <Text style={styles.searchMatchLabel}>Resultado da pesquisa</Text>}<Row title={task.title} caption={`${task.priority} · ${task.dueDate ? `Prazo: ${task.dueDate}` : 'Sem prazo'}`} symbol={task.completed ? 'check-circle-outline' : 'circle-outline'} muted={task.completed} styles={styles} /></Pressable>)}<AppInput value={entry} onChangeText={setEntry} placeholder="Nova tarefa…" /><DateField value={dueDate} onChange={setDueDate} placeholder="Prazo: AAAA-MM-DD (opcional)" /><AppButton disabled={!entry.trim()} onPress={() => { if(entry.trim()) { addTask(id, { title: entry.trim(), dueDate: dueDate.trim() || undefined }); setEntry(''); setDueDate(''); } }}>Adicionar tarefa</AppButton></Collection>}
       {panel === 'documents' && <Collection title="Documentos" styles={styles}><DocumentUpload onAdd={(document) => addDocument(id, document)} /><Text style={styles.helper}>O conteúdo extraído só entra no contexto depois de ser revisto e confirmado.</Text>{item.documents.length === 0 && <Text style={styles.muted}>Ainda não existem documentos.</Text>}{item.documents.map((doc) => <View key={doc.id} style={styles.documentRow}><Row title={doc.name} caption={[doc.type, formatFileSize(doc.size), doc.extractionStatus??'Por extrair',doc.suggestions?.length?`${doc.suggestions.length} sugestões`:undefined, formatDate(doc.addedAt)].filter(Boolean).join(' · ')} symbol="file-document-outline" styles={styles} /><View style={styles.documentActions}>{doc.extractionStatus==='Por rever'||doc.extractionStatus==='Revisto'?<Pressable onPress={()=>router.push({pathname:'/documents/review/[caseId]/[documentId]' as never,params:{caseId:id,documentId:doc.id}} as never)}><Text style={styles.reviewLabel}>Rever</Text></Pressable>:null}{doc.fileId?<Pressable onPress={() => openDocument(doc)}><Text style={styles.openLabel}>Abrir</Text></Pressable>:<Text style={styles.openLabelMuted}>Ficheiro indisponível</Text>}<Pressable accessibilityLabel={`Eliminar ${doc.name}`} accessibilityRole="button" onPress={() => confirmDestructive({ title: 'Eliminar documento?', message: `O registo “${doc.name}” será removido deste Caso.`, onConfirm: () => deleteDocument(id, doc.id) })} style={({pressed})=>[styles.deleteDocumentButton,pressed&&styles.buttonPressed]}><Text style={styles.deleteDocument}>Eliminar</Text></Pressable></View></View>)}</Collection>}
-      {panel === 'templates' && <Collection title="Modelos de peças e documentos" styles={styles}><Text style={styles.helper}>Escolhe um modelo para pré-visualizar o texto preenchido com os dados deste caso, cliente e advogado.</Text><View style={styles.tabs}>{DOCUMENT_TEMPLATES.map((template) => <Pressable key={template.id} onPress={() => setSelectedTemplateId(template.id)} style={[styles.tab, selectedTemplateId === template.id && styles.tabActive]}><Text style={[styles.tabText, selectedTemplateId === template.id && styles.tabTextActive]}>{template.label}</Text></Pressable>)}</View><View style={styles.templatePreview}><Text style={styles.templatePreviewText}>{filledTemplate}</Text></View><AppButton onPress={shareTemplate}>Partilhar / Exportar</AppButton></Collection>}
+      {panel === 'templates' && <Collection title="Modelos de peças e documentos" styles={styles}><Text style={styles.helper}>Escolhe um modelo para pré-visualizar o texto preenchido com os dados deste caso, cliente e advogado.</Text><View style={styles.tabs}>{DOCUMENT_TEMPLATES.map((template) => <Pressable key={template.id} onPress={() => setSelectedTemplateId(template.id)} style={[styles.tab, selectedTemplateId === template.id && styles.tabActive]}><Text style={[styles.tabText, selectedTemplateId === template.id && styles.tabTextActive]}>{template.label}</Text></Pressable>)}</View>{templateMissing.length > 0 && <Text style={[styles.helper, { color: colors.warningText }]}>Campos em falta: {templateMissing.join(', ')}. Completa a ficha do caso, do cliente ou o teu perfil, ou edita o texto depois de copiar.</Text>}<View style={styles.templatePreview}><Text selectable style={styles.templatePreviewText}>{filledTemplate}</Text></View><AppButton onPress={shareTemplate}>{Platform.OS === 'web' ? 'Copiar texto' : 'Copiar / Partilhar'}</AppButton></Collection>}
+      {panel === 'hours' && <Collection title="Horas e honorários" styles={styles}><Text style={styles.helper}>O tempo registado aqui entra em Honorários como registo «Tempo», pronto a cobrar ao cliente.</Text>
+        <View style={styles.factSummary}><FactCount value={formatHours(totalHours)} label="Horas registadas" tone="pending" styles={styles} /><FactCount value={euros(timeEntries.reduce((sum, fee) => sum + fee.amount, 0))} label="Valor do tempo (c/ IVA)" tone="success" styles={styles} /><FactCount value={euros(unpaidFees)} label="Por receber neste caso" tone="danger" styles={styles} /></View>
+        {caseFees === null && <ActivityIndicator color={colors.primary} />}{feesError ? <Text style={[styles.muted, { color: colors.danger }]}>{feesError}</Text> : null}
+        {caseFees?.length === 0 && !loggingTime && <Text style={styles.muted}>Ainda não registaste horas neste caso.</Text>}
+        {[...(caseFees ?? [])].sort((a, b) => (b.workDate ?? b.createdAt).localeCompare(a.workDate ?? a.createdAt)).map((fee) => <Row key={fee.id} title={`${fee.description} · ${euros(fee.amount)}`} caption={[fee.kind, fee.workDate ? parseLocalDate(fee.workDate)?.toLocaleDateString('pt-PT') : null, fee.paid ? 'Recebido' : `Por receber · vence ${fee.dueDate}`].filter(Boolean).join(' · ')} symbol={fee.kind === 'Tempo' ? 'clock-outline' : 'cash'} muted={fee.paid} styles={styles} />)}
+        {loggingTime ? <FeeEntryForm caseId={id} onSave={saveTimeEntry} onCancel={() => setLoggingTime(false)} /> : <AppButton onPress={() => setLoggingTime(true)}>Registar horas</AppButton>}
+        <Pressable accessibilityRole="button" onPress={() => router.push('/fees' as never)}><Text style={[styles.link, { textAlign: 'center' }]}>Ver todos os honorários</Text></Pressable>
+      </Collection>}
       {panel === 'timeline' && <Collection title="Linha temporal" styles={styles}>{item.timeline.length === 0 && <Text style={styles.muted}>Sem acontecimentos.</Text>}<Timeline events={item.timeline} styles={styles} /></Collection>}
       {panel === 'jurisprudencia' && <Collection title="Casos semelhantes" styles={styles}><Text style={styles.helper}>Pesquisa automática de acórdãos e sentenças reais e concluídos com base nos dados deste Caso. Confirma sempre a fonte antes de citar.</Text>{similarLoading && <ActivityIndicator color={colors.primary} />}{similarError && <Text style={styles.muted}>Não foi possível pesquisar casos semelhantes. Tenta novamente mais tarde.</Text>}{!similarLoading && !similarError && similarCases?.length === 0 && <Text style={styles.muted}>Não foram encontrados casos semelhantes verificáveis.</Text>}{similarCases?.map((similar, index) => <Pressable key={index} disabled={!similar.url} onPress={() => similar.url && Linking.openURL(similar.url)}><Row title={similar.title} caption={[similar.court, similar.date, similar.summary].filter(Boolean).join(' · ')} symbol="scale-balance" styles={styles} /></Pressable>)}</Collection>}
     </ScrollView></View></SafeAreaView>;
@@ -131,7 +161,7 @@ function Collection({ title, children, styles }: { title:string; children:ReactN
 function Row({ title, caption, symbol, muted, styles }: { title:string; caption:string; symbol:IconName; muted?:boolean; styles:ReturnType<typeof makeStyles> }) { const { colors } = useAppTheme(); return <View style={styles.row}><Icon name={symbol} size={18} color={muted ? colors.textSoft : colors.primary} /><View style={{ flex:1 }}><Text style={[styles.rowTitle, muted && styles.done]}>{title}</Text><Text style={styles.rowCaption}>{caption}</Text></View></View>; }
 function Meta({label,value,styles}:{label:string;value:string;styles:ReturnType<typeof makeStyles>}) { return <View style={{ flex:1 }}><Text style={styles.metaLabel}>{label}</Text><Text numberOfLines={2} style={styles.metaValue}>{value}</Text></View>; }
 function Detail({label,value,styles}:{label:string;value:string;styles:ReturnType<typeof makeStyles>}) { return <View style={styles.detail}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>; }
-function FactCount({value,label,tone,styles}:{value:number;label:string;tone:'success'|'pending'|'danger';styles:ReturnType<typeof makeStyles>}) { return <View style={styles.factCount}><Text style={[styles.factCountValue,tone==='success'&&styles.factCountSuccess,tone==='danger'&&styles.factCountDanger]}>{value}</Text><Text style={styles.factCountLabel}>{label}</Text></View>; }
+function FactCount({value,label,tone,styles}:{value:number|string;label:string;tone:'success'|'pending'|'danger';styles:ReturnType<typeof makeStyles>}) { return <View style={styles.factCount}><Text style={[styles.factCountValue,tone==='success'&&styles.factCountSuccess,tone==='danger'&&styles.factCountDanger]}>{value}</Text><Text style={styles.factCountLabel}>{label}</Text></View>; }
 const formatDate = (value:string) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Data não disponível' : new Intl.DateTimeFormat('pt-PT', { day:'2-digit', month:'short', year:'numeric' }).format(date);

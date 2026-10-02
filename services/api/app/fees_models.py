@@ -14,6 +14,7 @@ class FeeEntry(Base):
     description: Mapped[str] = mapped_column(Text)
     amount: Mapped[float] = mapped_column(Float)  # total a cobrar, IVA incluído
     hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    workDate: Mapped[str | None] = mapped_column(String(10), nullable=True)  # dia em que o trabalho foi feito (registos de tempo)
     vat: Mapped[str] = mapped_column(String(20), default='')
     dueDate: Mapped[str] = mapped_column(String(10))
     paid: Mapped[bool] = mapped_column(Boolean, default=False)
