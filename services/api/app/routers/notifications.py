@@ -1,10 +1,14 @@
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 from .. import models, schemas
+from ..db import get_db
 from ..email import send_email
+from ..push import send_push
 from ..security import get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -23,8 +27,13 @@ _logo_bytes = _LOGO_PATH.read_bytes() if _LOGO_PATH.exists() else None
 @router.post("/delay-email", status_code=204)
 def send_delay_email(
     payload: schemas.DelayNotification,
+    db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ) -> None:
+    # Push primeiro: segue mesmo que o SMTP falhe (send_push nunca lança).
+    send_push(db, current_user.id, f"Prazo em atraso: {payload.taskTitle}",
+              f"{payload.caseTitle} · {payload.daysLate} dia(s) de atraso",
+              {"caseId": payload.caseId} if payload.caseId else None)
     subject = f"[LEXORA] Alerta de prazo em atraso — {payload.taskTitle}"
     saudacao = current_user.displayName.strip() or "Utilizador"
     body = (
@@ -81,6 +90,32 @@ def send_delay_email(
         send_email(current_user.email, subject, body, html_body, inline_image)
     except Exception as error:
         raise HTTPException(502, f"Não foi possível enviar o email: {error}") from error
+
+
+@router.post("/push-tokens", status_code=204)
+def register_push_token(
+    payload: schemas.PushTokenPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+) -> None:
+    existing = db.get(models.PushToken, payload.token)
+    if existing:
+        existing.userId = current_user.id  # o dispositivo mudou de conta
+    else:
+        db.add(models.PushToken(token=payload.token, userId=current_user.id, createdAt=datetime.now(timezone.utc).isoformat()))
+    db.commit()
+
+
+@router.delete("/push-tokens/{token}", status_code=204)
+def unregister_push_token(
+    token: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+) -> None:
+    existing = db.get(models.PushToken, token)
+    if existing and existing.userId == current_user.id:
+        db.delete(existing)
+        db.commit()
 
 
 @router.post("/client-email", status_code=204)

@@ -66,3 +66,12 @@ class Case(Base):
     legalIssues: Mapped[list] = mapped_column(JSON, default=list)
     missingFacts: Mapped[list] = mapped_column(JSON, default=list)
     collaboratorEmails: Mapped[list] = mapped_column(JSON, default=list)
+
+
+class PushToken(Base):
+    """Token Expo de um dispositivo; um utilizador pode ter vários."""
+    __tablename__ = "push_tokens"
+
+    token: Mapped[str] = mapped_column(String(255), primary_key=True)
+    userId: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    createdAt: Mapped[str] = mapped_column(String(40))

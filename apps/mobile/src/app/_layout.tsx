@@ -1,8 +1,9 @@
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { SyncStatusBanner } from '@/components/sync-status-banner';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { CasesProvider, useCases } from '@/providers/cases-provider';
 import { ClientsProvider, useClients } from '@/providers/clients-provider';
 import { LegalUpdatesProvider } from '@/providers/legal-updates-provider';
@@ -32,6 +33,18 @@ function Navigation() {
     if (!user && !isPublicRoute) { router.replace('/login'); return; }
     if (user && (root === 'login' || root === 'register')) router.replace('/home');
   }, [user, hydrated, segments, router]);
+
+  // Tocar num push com caseId abre o caso (também no arranque a frio).
+  const lastResponse = Notifications.useLastNotificationResponse();
+  const handledResponse = useRef<string | null>(null);
+  useEffect(() => {
+    if (Platform.OS === 'web' || !user || !lastResponse) return;
+    const id = lastResponse.notification.request.identifier;
+    const caseId = lastResponse.notification.request.content.data?.caseId;
+    if (handledResponse.current === id || typeof caseId !== 'string') return;
+    handledResponse.current = id;
+    router.push({ pathname: '/cases/[id]', params: { id: caseId } });
+  }, [lastResponse, user, router]);
 
   const inPortal = (segments as readonly string[])[0] === 'portal';
   const loading = !inPortal && (!hydrated || !!user && (!casesHydrated || !clientsHydrated));

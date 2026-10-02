@@ -59,6 +59,11 @@ class DelayNotification(BaseModel):
     taskTitle: str
     caseTitle: str
     daysLate: int = Field(ge=0)
+    caseId: str | None = None  # para o push abrir o caso ao tocar
+
+
+class PushTokenPayload(BaseModel):
+    token: str = Field(min_length=1, max_length=255)
 
 
 class ClientEmailRequest(BaseModel):
