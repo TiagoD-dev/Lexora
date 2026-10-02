@@ -31,3 +31,10 @@ def generate(system: str, prompt: str, *, history: list[dict] | None = None, web
         response_json_schema=json_schema,
     )
     return _client().models.generate_content(model=MODEL, contents=contents, config=config).text or ""
+
+
+def transcribe(content: bytes, mime_type: str) -> str:
+    """OCR: transcrição literal de uma imagem ou PDF digitalizado."""
+    prompt = "Transcreve integralmente e de forma literal o texto deste documento, na língua original. Responde apenas com o texto transcrito, sem comentários."
+    contents = [types.Content(role="user", parts=[types.Part.from_bytes(data=content, mime_type=mime_type), types.Part(text=prompt)])]
+    return _client().models.generate_content(model=MODEL, contents=contents).text or ""

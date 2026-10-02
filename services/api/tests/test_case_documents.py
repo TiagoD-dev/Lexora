@@ -16,6 +16,27 @@ def test_extract_writes_text_sidecar(client, tmp_path, monkeypatch):
     assert sidecar.read_text(encoding="utf-8") == "Contrato de arrendamento assinado."
 
 
+
+def test_extract_image_uses_ocr(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DOCUMENTS_DIR", tmp_path)
+    calls = []
+    monkeypatch.setattr(main.llm, "transcribe", lambda content, mime: calls.append(mime) or "Auto de notícia lavrado em 01/09/2026.")
+    token = register(client, "ocr@example.com")
+    response = client.post(
+        "/documents/extract", headers=auth(token),
+        files={"file": ("auto.jpg", b"fake-jpeg", "image/jpeg")},
+    )
+    assert response.status_code == 200, response.text
+    assert calls == ["image/jpeg"]
+    assert "Auto de notícia" in response.json()["text"]
+
+    def fail(content, mime):
+        raise KeyError("GEMINI_API_KEY")
+    monkeypatch.setattr(main.llm, "transcribe", fail)
+    failed = client.post("/documents/extract", headers=auth(token), files={"file": ("auto.png", b"x", "image/png")})
+    assert failed.status_code == 503
+    assert "GEMINI" not in failed.text
+
 def test_ranking_picks_relevant_chunk_and_ignores_other_users(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "DOCUMENTS_DIR", tmp_path)
     filler = "\n\n".join(f"Parágrafo {i} sobre a reunião com o cliente e prazos gerais." * 20 for i in range(4))

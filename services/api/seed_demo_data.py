@@ -98,7 +98,7 @@ def main() -> None:
                      {"id": "sug-4", "type": "Entidade", "value": "Nortex Distribuição, Lda.", "detail": "Entidade empregadora", "excerpt": "A Nortex Distribuição, Lda., na qualidade de entidade empregadora..."},
                  ]},
                 {"id": "doc-3", "name": "Recibos de vencimento (jan-jul 2026).xlsx", "type": "XLSX", "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "size": 94200, "status": "A processar", "extractionStatus": "A processar", "addedAt": iso("2026-08-30")},
-                {"id": "doc-4", "name": "Fotografia do posto de trabalho.jpg", "type": "JPG", "mimeType": "image/jpeg", "size": 2200000, "status": "Erro", "extractionStatus": "Erro", "extractionError": "Formato de imagem ainda não suportado para extração de texto.", "addedAt": iso("2026-08-30")},
+                {"id": "doc-4", "name": "Fotografia do posto de trabalho.jpg", "type": "JPG", "mimeType": "image/jpeg", "size": 2200000, "status": "Erro", "extractionStatus": "Erro", "extractionError": "O reconhecimento de texto (OCR) está indisponível de momento. Tenta novamente mais tarde.", "addedAt": iso("2026-08-30")},
             ],
             timeline=[
                 {"id": "tl-1", "title": "Caso criado", "date": iso("2026-08-20")},
