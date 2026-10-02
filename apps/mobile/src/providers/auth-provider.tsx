@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 
 import { getStoredToken } from '@/services/api-client';
 import { fetchCurrentUser, login as loginRequest, logout as logoutRequest, register as registerRequest, updateProfile as updateProfileRequest, type AuthUser, type ProfileFields, type RegisterInput } from '@/services/auth-service';
+import { registerForPush, unregisterForPush } from '@/utils/push-registration';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -27,9 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Ao iniciar sessão (ou arrancar a app já autenticada) regista o dispositivo para push.
+  useEffect(() => { if (user?.id) registerForPush(); }, [user?.id]);
+
   const login = async (email: string, password: string) => { setUser(await loginRequest(email, password)); };
   const register = async (input: RegisterInput) => { setUser(await registerRequest(input)); };
-  const logout = async () => { await logoutRequest(); setUser(null); };
+  const logout = async () => { await unregisterForPush(); await logoutRequest(); setUser(null); };
   const updateProfile = async (patch: Partial<ProfileFields>) => { setUser(await updateProfileRequest(patch)); };
 
   const value = useMemo(() => ({ user, hydrated, login, register, logout, updateProfile }), [user, hydrated]);

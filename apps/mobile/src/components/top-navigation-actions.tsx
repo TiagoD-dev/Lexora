@@ -57,10 +57,10 @@ export function TopNavigationActions() {
       const emailed: string[] = raw ? JSON.parse(raw) : [];
       const toEmail = late.filter(({ task }) => !emailed.includes(task.id));
       if (!toEmail.length) return;
-      Promise.all(toEmail.map(({ task, caseTitle }) => {
+      Promise.all(toEmail.map(({ task, caseId, caseTitle }) => {
         const due = parseLocalDate(task.dueDate!)!;
         const daysLate = Math.abs(Math.ceil((due.getTime() - now.getTime()) / 86400000));
-        return sendDelayEmail(task.title, caseTitle, daysLate).catch(() => undefined);
+        return sendDelayEmail(task.title, caseTitle, daysLate, caseId).catch(() => undefined);
       })).then(() => {
         const next = [...emailed, ...toEmail.map(({ task }) => task.id)];
         AsyncStorage.setItem(EMAILED_STORAGE_KEY, JSON.stringify(next)).catch(() => undefined);
