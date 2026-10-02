@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 
 from sqlalchemy.orm import Session
 
-from . import models
+from . import llm, models
 from .db import get_db
 from .routers import auth, billing, cases, clients, legal_updates, notifications, portal
 from .security import get_current_user, get_user_from_token
@@ -63,6 +63,14 @@ def health_check() -> dict[str, str]:
 MAX_FILE_SIZE = 25 * 1024 * 1024
 DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "documents_storage"
 DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+IMAGE_MIME_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".heic": "image/heic", ".heif": "image/heif"}
+
+
+def ocr(content: bytes, mime_type: str) -> str:
+    try:
+        return llm.transcribe(content, mime_type)
+    except Exception as error:  # chave GEMINI_API_KEY em falta ou erro do fornecedor; nada é guardado
+        raise HTTPException(503, "O reconhecimento de texto (OCR) está indisponível de momento. Tenta novamente mais tarde.") from error
 
 
 def extract_text(filename: str, content: bytes) -> tuple[str, int | None]:
@@ -70,7 +78,12 @@ def extract_text(filename: str, content: bytes) -> tuple[str, int | None]:
     if extension == ".pdf":
         from pypdf import PdfReader
         reader = PdfReader(BytesIO(content))
-        return "\n\n".join(page.extract_text() or "" for page in reader.pages), len(reader.pages)
+        text = "\n\n".join(page.extract_text() or "" for page in reader.pages)
+        if len(text.strip()) < 20 * len(reader.pages):  # ponytail: heurística de PDF digitalizado (<20 caracteres/página); afinar se houver falsos positivos
+            text = ocr(content, "application/pdf")
+        return text, len(reader.pages)
+    if extension in IMAGE_MIME_TYPES:
+        return ocr(content, IMAGE_MIME_TYPES[extension]), None
     if extension in {".docx", ".doc"}:
         if extension == ".doc":
             raise HTTPException(422, "O formato DOC antigo deve ser convertido para DOCX.")
