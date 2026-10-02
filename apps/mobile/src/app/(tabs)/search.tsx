@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppInput } from '@/components/app-input';
 import { CaseCard } from '@/components/case-card';
 import { ClientCard } from '@/components/client-card';
 import { EmptyState } from '@/components/empty-state';
+import { SearchBox } from '@/components/list-kit';
 import { useCases } from '@/providers/cases-provider';
 import { useClients } from '@/providers/clients-provider';
 import { useAppTheme } from '@/providers/theme-provider';
-import type { ThemeColors } from '@/theme';
+import { radius, type ThemeColors } from '@/theme';
 
 type ContentResult = { key: string; kind: 'document' | 'note' | 'task'; itemId: string; caseId: string; caseTitle: string; title: string; excerpt: string };
 export function normalizeSearch(value: string) {
@@ -76,7 +76,8 @@ export default function SearchScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.eyebrow}>PESQUISA</Text>
         <Text style={styles.title}>Pesquisa global</Text>
-        <AppInput autoFocus accessibilityLabel="Pesquisar clientes, casos, documentos, notas e tarefas" value={query} onChangeText={setQuery} placeholder="Nome, processo ou palavras do conteúdo…" returnKeyType="search" />
+        <Text style={styles.subtitle}>Clientes, Casos, documentos, notas e tarefas num só sítio</Text>
+        <SearchBox autoFocus label="Pesquisar clientes, casos, documentos, notas e tarefas" value={query} onChange={setQuery} placeholder="Nome, processo ou palavras do conteúdo…" />
         {!normalizedQuery && <View style={styles.section}><EmptyState symbol="magnify" title="Encontra informação em toda a app" description="Pesquisa clientes, casos, documentos, notas e tarefas, incluindo o texto extraído dos documentos." /></View>}
         {!!normalizedQuery && <Text style={styles.summary}>{totalResults} {totalResults === 1 ? 'resultado' : 'resultados'}</Text>}
         {filteredClients.length > 0 && <View style={styles.section}>
@@ -110,13 +111,14 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: { width: '100%', maxWidth: 1000, alignSelf: 'center', paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 },
-    eyebrow: { color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1.4 },
-    title: { marginTop: 5, marginBottom: 16, color: colors.text, fontSize: 28, fontWeight: '800' },
-    summary: { marginTop: 12, color: colors.textMuted, fontSize: 14 }, section: { marginTop: 22 },
-    sectionTitle: { marginBottom: 10, color: colors.textMuted, fontSize: 13, fontWeight: '800' },
+    eyebrow: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.4 },
+    title: { marginTop: 5, color: colors.text, fontSize: 28, fontWeight: '800' },
+    subtitle: { marginTop: 5, marginBottom: 20, color: colors.textMuted, fontSize: 12 },
+    summary: { marginTop: 20, color: colors.textSoft, fontSize: 11, fontWeight: '800', letterSpacing: .8, textTransform: 'uppercase' }, section: { marginTop: 22 },
+    sectionTitle: { marginBottom: 10, color: colors.textSoft, fontSize: 11, fontWeight: '800', letterSpacing: .8, textTransform: 'uppercase' },
     list: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }, resultList: { gap: 10 },
-    result: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, gap: 6, minHeight: 48 },
-    pressed: { opacity: 0.75 }, resultTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
-    caseTitle: { color: colors.textMuted, fontSize: 13 }, excerpt: { color: colors.text, fontSize: 14, lineHeight: 21 },
+    result: { padding: 16, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, gap: 6, minHeight: 48 },
+    pressed: { opacity: 0.75 }, resultTitle: { color: colors.textStrong, fontSize: 15, fontWeight: '800' },
+    caseTitle: { color: colors.accent, fontSize: 11, fontWeight: '800', letterSpacing: .4 }, excerpt: { color: colors.text, fontSize: 14, lineHeight: 21 },
   });
 }

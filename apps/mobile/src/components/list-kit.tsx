@@ -11,11 +11,11 @@ export function StatTiles({ items }: { items: { icon: IconName; value: number; l
   </View>)}</View>;
 }
 
-export function SearchBox({ value, onChange, placeholder, label }: { value: string; onChange: (text: string) => void; placeholder: string; label: string }) {
+export function SearchBox({ value, onChange, placeholder, label, autoFocus }: { value: string; onChange: (text: string) => void; placeholder: string; label: string; autoFocus?: boolean }) {
   const { colors } = useAppTheme(); const styles = makeStyles(colors);
   return <View style={styles.search}>
     <Icon name="magnify" size={20} color={colors.textMuted} />
-    <TextInput accessibilityLabel={label} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.placeholder} returnKeyType="search" value={value} style={styles.searchInput} />
+    <TextInput autoFocus={autoFocus} accessibilityLabel={label} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.placeholder} returnKeyType="search" value={value} style={styles.searchInput} />
     {value ? <Pressable accessibilityLabel="Limpar pesquisa" hitSlop={8} onPress={() => onChange('')}><Icon name="close-circle" size={18} color={colors.textSoft} /></Pressable> : null}
   </View>;
 }
