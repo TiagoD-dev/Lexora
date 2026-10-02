@@ -20,7 +20,8 @@ class FeeCreate(BaseModel):
     client: str = Field(min_length=1, max_length=255)
     description: str = Field(min_length=1)
     amount: float = Field(gt=0)
-    hours: float | None = None
+    hours: float | None = Field(default=None, gt=0)
+    workDate: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     vat: str = Field(default="", max_length=20)
     dueDate: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     paid: bool = False
