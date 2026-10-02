@@ -1,6 +1,7 @@
 import { apiFetch, setStoredToken } from './api-client';
 
-export type AuthUser = { id: string; email: string; displayName: string; professionalTitle: string; role: string; plan: string };
+export type ProfileFields = { displayName: string; professionalTitle: string; organization: string; phone: string; barNumber: string; primaryLegalArea: string; bio: string };
+export type AuthUser = ProfileFields & { id: string; email: string; role: string; plan: string };
 export type RegisterInput = { email: string; password: string; displayName: string; professionalTitle: string };
 type AuthResponse = { accessToken: string; user: AuthUser };
 
@@ -20,7 +21,7 @@ export function fetchCurrentUser(): Promise<AuthUser> {
   return apiFetch<AuthUser>('/auth/me');
 }
 
-export function updateProfile(patch: { displayName?: string; professionalTitle?: string }): Promise<AuthUser> {
+export function updateProfile(patch: Partial<ProfileFields>): Promise<AuthUser> {
   return apiFetch<AuthUser>('/auth/me', { method: 'PATCH', body: JSON.stringify(patch) });
 }
 

@@ -4,14 +4,13 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AuthShell } from '@/components/auth-shell';
 import { useAuth } from '@/providers/auth-provider';
-import { useSettings } from '@/providers/settings-provider';
 import { Icon, type IconName } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
 import { ApiError } from '@/services/api-client';
 import { radius, type ThemeColors } from '@/theme';
 
 export default function RegisterScreen(){
-  const router=useRouter();const {register}=useAuth();const {updateSettings}=useSettings();const {colors}=useAppTheme();const styles=makeStyles(colors);
+  const router=useRouter();const {register}=useAuth();const {colors}=useAppTheme();const styles=makeStyles(colors);
   const [name,setName]=useState('');const [email,setEmail]=useState('');const [role,setRole]=useState('');const [password,setPassword]=useState('');const [confirmation,setConfirmation]=useState('');const [accepted,setAccepted]=useState(false);const [error,setError]=useState('');const [submitting,setSubmitting]=useState(false);
   const submit=async()=>{
     const normalized=email.trim().toLowerCase();
@@ -23,7 +22,6 @@ export default function RegisterScreen(){
     setError('');setSubmitting(true);
     try{
       await register({email:normalized,password,displayName:name.trim(),professionalTitle:role.trim()});
-      updateSettings({displayName:name.trim(),email:normalized,professionalTitle:role.trim()});
       router.replace('/home');
     }catch(err){setError(err instanceof ApiError?err.message:'Não foi possível criar a conta. Tenta novamente.');}
     finally{setSubmitting(false);}

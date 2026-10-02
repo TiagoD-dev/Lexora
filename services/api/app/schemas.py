@@ -22,13 +22,23 @@ class UserOut(BaseModel):
     email: str
     displayName: str
     professionalTitle: str
+    organization: str = ""
+    phone: str = ""
+    barNumber: str = ""
+    primaryLegalArea: str = ""
+    bio: str = ""
     role: str
     plan: str
 
 
 class UserUpdate(BaseModel):
-    displayName: str | None = None
-    professionalTitle: str | None = None
+    displayName: str | None = Field(default=None, min_length=1, max_length=255)
+    professionalTitle: str | None = Field(default=None, max_length=255)
+    organization: str | None = Field(default=None, max_length=120)
+    phone: str | None = Field(default=None, max_length=30)
+    barNumber: str | None = Field(default=None, max_length=40)
+    primaryLegalArea: str | None = Field(default=None, max_length=120)
+    bio: str | None = Field(default=None, max_length=280)
 
 
 class AuthResponse(BaseModel):

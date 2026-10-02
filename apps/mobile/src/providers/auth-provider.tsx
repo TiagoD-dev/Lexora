@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { getStoredToken } from '@/services/api-client';
-import { fetchCurrentUser, login as loginRequest, logout as logoutRequest, register as registerRequest, type AuthUser, type RegisterInput } from '@/services/auth-service';
+import { fetchCurrentUser, login as loginRequest, logout as logoutRequest, register as registerRequest, updateProfile as updateProfileRequest, type AuthUser, type ProfileFields, type RegisterInput } from '@/services/auth-service';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -9,6 +9,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (patch: Partial<ProfileFields>) => Promise<void>;
 };
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -29,8 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => { setUser(await loginRequest(email, password)); };
   const register = async (input: RegisterInput) => { setUser(await registerRequest(input)); };
   const logout = async () => { await logoutRequest(); setUser(null); };
+  const updateProfile = async (patch: Partial<ProfileFields>) => { setUser(await updateProfileRequest(patch)); };
 
-  const value = useMemo(() => ({ user, hydrated, login, register, logout }), [user, hydrated]);
+  const value = useMemo(() => ({ user, hydrated, login, register, logout, updateProfile }), [user, hydrated]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

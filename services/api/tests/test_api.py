@@ -88,6 +88,15 @@ def test_update_profile_requires_auth_and_updates_only_provided_fields(client):
     assert again.json()["displayName"] == "Ana Nova"
     assert again.json()["professionalTitle"] == "Advogada"
 
+    professional = {"organization": "Sociedade X", "phone": "+351 912 000 000", "barNumber": "12345L", "primaryLegalArea": "Direito do Trabalho", "bio": "Advogada laboral."}
+    saved = client.patch("/auth/me", json=professional, headers=auth(token))
+    assert saved.status_code == 200
+    assert {key: saved.json()[key] for key in professional} == professional
+    assert client.get("/auth/me", headers=auth(token)).json()["bio"] == "Advogada laboral."
+
+    assert client.patch("/auth/me", json={"bio": "x" * 281}, headers=auth(token)).status_code == 422
+    assert client.patch("/auth/me", json={"displayName": ""}, headers=auth(token)).status_code == 422
+
 
 def test_clients_and_cases_are_isolated_between_users(client):
     owner_token = register(client, "owner@example.com")

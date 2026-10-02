@@ -16,15 +16,12 @@ import { useAppTheme } from '@/providers/theme-provider';
 import { radius, type ThemeColors } from '@/theme';
 import { hashTheme } from '@/utils/palette';
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export function EditProfileScreen() {
   const router = useRouter();
   const { settings, hydrated, updateSettings } = useSettings();
   const { colors } = useAppTheme();
   const styles = makeStyles(colors);
   const [name, setName] = useState(settings.displayName);
-  const [email, setEmail] = useState(settings.email);
   const [professionalTitle, setProfessionalTitle] = useState(settings.professionalTitle);
   const [organization, setOrganization] = useState(settings.organization);
   const [phone, setPhone] = useState(settings.phone);
@@ -32,12 +29,12 @@ export function EditProfileScreen() {
   const [primaryLegalArea, setPrimaryLegalArea] = useState(settings.primaryLegalArea);
   const [bio, setBio] = useState(settings.bio);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // As definições carregam de forma assíncrona; sincroniza os campos assim que os valores reais chegarem.
   useEffect(() => {
     if (!hydrated) return;
     setName(settings.displayName);
-    setEmail(settings.email);
     setProfessionalTitle(settings.professionalTitle);
     setOrganization(settings.organization);
     setPhone(settings.phone);
@@ -48,42 +45,44 @@ export function EditProfileScreen() {
   }, [hydrated]);
 
   const normalizedName = name.trim();
-  const normalizedEmail = email.trim().toLowerCase();
-  const profileFields = [normalizedName, normalizedEmail, professionalTitle.trim(), organization.trim(), phone.trim(), barNumber.trim(), primaryLegalArea, bio.trim()];
-  const profileLabels = ['nome', 'email', 'função', 'organização', 'telefone', 'cédula', 'área', 'apresentação'];
+  const profileFields = [normalizedName, professionalTitle.trim(), organization.trim(), phone.trim(), barNumber.trim(), primaryLegalArea, bio.trim()];
+  const profileLabels = ['nome', 'função', 'organização', 'telefone', 'cédula', 'área', 'apresentação'];
   const nameError = normalizedName ? '' : 'Indica o nome a apresentar.';
-  const emailError = EMAIL_PATTERN.test(normalizedEmail) ? '' : 'Indica um email válido.';
-  const isValid = !nameError && !emailError;
+  const isValid = !nameError;
   const hasChanges = useMemo(
     () => normalizedName !== settings.displayName
-      || normalizedEmail !== settings.email.toLowerCase()
       || professionalTitle.trim() !== settings.professionalTitle
       || organization.trim() !== settings.organization
       || phone.trim() !== settings.phone
       || barNumber.trim() !== settings.barNumber
       || primaryLegalArea !== settings.primaryLegalArea
       || bio.trim() !== settings.bio,
-    [barNumber, bio, normalizedEmail, normalizedName, organization, phone, primaryLegalArea, professionalTitle, settings],
+    [barNumber, bio, normalizedName, organization, phone, primaryLegalArea, professionalTitle, settings],
   );
 
   const initials = normalizedName.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'U';
   const avatarTheme = hashTheme(colors, normalizedName || 'utilizador');
 
-  const save = () => {
+  const save = async () => {
     setSubmitted(true);
-    if (!isValid) return;
-
-    updateSettings({
+    if (!isValid || saving) return;
+    setSaving(true);
+    try {
+      await updateSettings({
       displayName: normalizedName,
-      email: normalizedEmail,
       professionalTitle: professionalTitle.trim(),
       organization: organization.trim(),
       phone: phone.trim(),
       barNumber: barNumber.trim(),
       primaryLegalArea,
       bio: bio.trim(),
-    });
-    Alert.alert('Perfil atualizado', 'As alterações foram guardadas neste dispositivo.');
+      });
+    } catch (error) {
+      Alert.alert('Não foi possível guardar', error instanceof Error ? error.message : 'Verifica a ligação e tenta novamente.');
+      return;
+    } finally {
+      setSaving(false);
+    }
     router.replace('/profile');
   };
 
@@ -124,27 +123,10 @@ export function EditProfileScreen() {
                 />
                 {submitted && nameError ? <Text style={styles.error}>{nameError}</Text> : null}
               </View>
-              <View>
-                <AppInput
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect={false}
-                  inputMode="email"
-                  keyboardType="email-address"
-                  label="Email *"
-                  maxLength={254}
-                  onChangeText={setEmail}
-                  onSubmitEditing={save}
-                  placeholder="nome@exemplo.pt"
-                  returnKeyType="done"
-                  textContentType="emailAddress"
-                  value={email}
-                />
-                {submitted && emailError ? <Text style={styles.error}>{emailError}</Text> : null}
-              </View>
+              <AppInput editable={false} label="Email" value={settings.email} />
             </FormRow>
             <Text style={styles.note}>
-              O email identifica o perfil nesta versão local. Alterá-lo não modifica credenciais de autenticação.
+              O email é o da tua conta e é usado para iniciar sessão; não pode ser alterado aqui.
             </Text>
           </FormSection>
 
@@ -165,11 +147,11 @@ export function EditProfileScreen() {
             <Text style={styles.counter}>{bio.length}/280</Text>
             <View style={styles.privacyBox}>
               <Icon name="shield-lock-outline" size={18} color={colors.primary} />
-              <View style={styles.privacyCopy}><Text style={styles.privacyTitle}>Guardado localmente</Text><Text style={styles.note}>Estes dados ficam neste dispositivo e podem ser alterados a qualquer momento.</Text></View>
+              <View style={styles.privacyCopy}><Text style={styles.privacyTitle}>Guardado na tua conta</Text><Text style={styles.note}>O perfil fica associado à tua conta Lexora e aparece em qualquer dispositivo onde inicies sessão.</Text></View>
             </View>
           </FormSection>
 
-          <View style={styles.actions}><AppButton disabled={!hasChanges} onPress={save}>Guardar alterações</AppButton></View>
+          <View style={styles.actions}><AppButton disabled={!hasChanges || saving} onPress={save}>{saving ? 'A guardar…' : 'Guardar alterações'}</AppButton></View>
         </ScrollView>
       </View>
     </SafeAreaView>
