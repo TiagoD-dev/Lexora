@@ -1,3 +1,4 @@
+import re
 import unicodedata
 
 from fastapi import APIRouter, Depends
@@ -22,9 +23,8 @@ def _nif(text: str | None) -> str:
 
 
 def _is_opposing(role: str | None) -> bool:
-    # ponytail: o papel é texto livre; basta conter "contrari" ("Parte contrária", "Contrária").
-    # Alargar a "réu"/"requerido" se os utilizadores usarem esses termos.
-    return "contrari" in normalize(role)
+    # ponytail: o papel é texto livre; mesmos termos que OPPOSING_ROLE em apps/mobile/src/constants/document-templates.ts.
+    return re.search(r"contrari|contraparte|\bre(us?|s)?\b|requerid|demandad|executad", normalize(role)) is not None
 
 
 @router.get("/check")

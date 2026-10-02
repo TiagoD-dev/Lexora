@@ -6,6 +6,8 @@ def test_conflict_check_matches_opposing_parties_and_clients_of_own_user_only(cl
     case = case_payload() | {"entities": [
         {"id": "e1", "name": "Cliente de teste", "role": "Cliente", "type": "Pessoa"},
         {"id": "e2", "name": "  José   Pereira, Lda. ", "role": "Parte contrária", "type": "Empresa", "nif": "PT 509 999 999"},
+        {"id": "e3", "name": "Maria Ré", "role": "Ré", "type": "Pessoa"},
+        {"id": "e4", "name": "Banco Requerido", "role": "Requerido", "type": "Empresa"},
     ]}
     assert client.post("/cases", json=case, headers=auth(token)).status_code == 201
     assert client.post("/clients", json=client_payload(), headers=auth(token)).status_code == 201
@@ -14,6 +16,10 @@ def test_conflict_check_matches_opposing_parties_and_clients_of_own_user_only(cl
     for params in ({"name": "jose pereira, LDA."}, {"nif": "509999999"}):
         found = client.get("/conflicts/check", params=params, headers=auth(token)).json()
         assert [(c["id"], c["party"]) for c in found["cases"]] == [("case-1", "  José   Pereira, Lda. ")]
+
+    # outros termos de contraparte ("Ré", "Requerido") também contam
+    for name in ("maria re", "Banco Requerido"):
+        assert [c["id"] for c in client.get("/conflicts/check", params={"name": name}, headers=auth(token)).json()["cases"]] == ["case-1"]
 
     # o cliente do caso não é parte contrária; mas coincide com um cliente existente (conflito inverso)
     found = client.get("/conflicts/check", params={"name": "CLIENTE DE TESTE"}, headers=auth(token)).json()

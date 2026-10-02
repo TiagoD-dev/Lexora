@@ -27,6 +27,9 @@ def test_time_entry_linked_to_case_keeps_work_date(client):
     created = client.post('/fees', json=payload, headers=owner)
     assert created.status_code == 201, created.text
     assert created.json()['caseId'] == 'case-1' and created.json()['workDate'] == '2026-09-30' and created.json()['hours'] == 1.5
+    # não se pode associar horas ao caso de outro utilizador
+    intruder = auth(register(client, 'fees-intruder@example.com'))
+    assert client.post('/fees', json=payload, headers=intruder).status_code == 404
     assert client.post('/fees', json={**payload, 'hours': 0}, headers=owner).status_code == 422
     assert client.post('/fees', json={**payload, 'workDate': '30/09/2026'}, headers=owner).status_code == 422
     # sem data de trabalho continua válido (honorários fixos, despesas)

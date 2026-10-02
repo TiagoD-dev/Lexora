@@ -10,6 +10,7 @@ from .. import models
 from ..db import get_db
 from ..fees_models import FeeEntry
 from ..security import get_current_user
+from .cases import _get_owned as _get_case
 
 router = APIRouter(prefix="/fees", tags=["fees"])
 
@@ -54,6 +55,8 @@ def list_fees(db: Session = Depends(get_db), current_user: models.User = Depends
 
 @router.post("", response_model=FeePayload, status_code=status.HTTP_201_CREATED)
 def create_fee(payload: FeeCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if payload.caseId:
+        _get_case(db, current_user, payload.caseId)  # 404 se o caso não for do utilizador
     fee = FeeEntry(id=str(uuid4()), ownerId=current_user.id, createdAt=datetime.now(timezone.utc).isoformat(), **payload.model_dump())
     db.add(fee)
     db.commit()
