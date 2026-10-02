@@ -4,6 +4,7 @@ import { AppButton } from '@/components/app-button';
 import { AppInput } from '@/components/app-input';
 import { Icon } from '@/components/icon';
 import { useAppTheme } from '@/providers/theme-provider';
+import { useConflictCheck } from '@/services/conflicts-service';
 import { radius, type ThemeColors } from '@/theme';
 import type { ClientDraft, ClientStatus, ClientType } from '@/types/client';
 import { hashTheme } from '@/utils/palette';
@@ -17,6 +18,7 @@ export function ClientForm({ initial, submitLabel, onSubmit }: { initial?: Parti
   const initials = value.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
   const theme = hashTheme(colors, value.name || 'novo-cliente');
   const isCompany = value.type === 'Empresa';
+  const conflicts = useConflictCheck(value.name, value.nif).cases;
 
   return <View style={styles.form}>
     <View style={styles.hero}>
@@ -50,6 +52,7 @@ export function ClientForm({ initial, submitLabel, onSubmit }: { initial?: Parti
       <AppInput label={isCompany ? 'Denominação social *' : 'Nome completo *'} value={value.name} onChangeText={(text) => set('name', text)} placeholder={isCompany ? 'Ex.: Lexora, Lda.' : 'Nome do cliente'} />
       <AppInput label="NIF / NIPC" value={value.nif} onChangeText={(text) => set('nif', text)} placeholder="Opcional" />
     </View>
+    {conflicts.length > 0 && <Text accessibilityRole="alert" style={styles.conflict}>Possível conflito de interesses: figura como parte contrária em {conflicts.map((item) => `${item.reference} (${item.title})`).join(', ')}.</Text>}
 
     <Text style={styles.sectionLabel}>CONTACTO</Text>
     <View style={styles.card}>
@@ -86,6 +89,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   card: { gap: 16, padding: 18, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, backgroundColor: colors.surface },
   field: { gap: 8 },
   label: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
+  conflict: { padding: 12, borderRadius: radius.md, backgroundColor: colors.warningBackground, color: colors.warningText, fontSize: 12, lineHeight: 18 },
   helper: { marginTop: -8, color: colors.textMuted, fontSize: 11 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.pill, backgroundColor: colors.surface },

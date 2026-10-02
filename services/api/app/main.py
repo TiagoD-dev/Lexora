@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .db import get_db
-from .routers import auth, billing, cases, clients, legal_updates, notifications, portal
+from .routers import auth, billing, cases, clients, conflicts, legal_updates, notifications, portal
 from .security import get_current_user, get_user_from_token
 
 API_ROOT = Path(__file__).resolve().parent.parent
@@ -51,6 +51,7 @@ app.include_router(auth.router)
 app.include_router(billing.router)
 app.include_router(clients.router)
 app.include_router(cases.router)
+app.include_router(conflicts.router)
 app.include_router(legal_updates.router)
 app.include_router(notifications.router)
 

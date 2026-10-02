@@ -10,7 +10,7 @@ import { cancelTaskReminders, scheduleTaskReminders } from '@/utils/task-notific
 type CaseDraft = Pick<LegalCase, 'title' | 'client' | 'clientId' | 'area' | 'court' | 'processNumber' | 'responsible' | 'priority' | 'description' | 'status'>;
 type CasesContextValue = {
   cases: LegalCase[]; hydrated: boolean; syncStatus: 'saving' | 'saved' | 'error'; syncError: string | null; retrySync: () => void; getCase: (id: string) => LegalCase | undefined;
-  createCase: (draft: CaseDraft) => string; updateCase: (id: string, patch: Partial<CaseDraft>) => void;
+  createCase: (draft: CaseDraft, opposingParty?: string) => string; updateCase: (id: string, patch: Partial<CaseDraft>) => void;
   archiveCase: (id: string) => void; deleteCase: (id: string) => void;
   syncClientName: (clientId: string, name: string) => void;
   addNote: (id: string, text: string) => void; addTask: (id: string, task: { title: string; description?: string; dueDate?: string; priority?: TaskPriority; deadlineKind?: DeadlineKind; recurrence?: RecurrenceRule; reminderDays?: number[] }) => void;
@@ -91,10 +91,10 @@ export function CasesProvider({ children }: { children: ReactNode }) {
     if (change) syncCase(change.before, change.after);
   };
   const touch = (item: LegalCase) => ({ ...item, updatedAt: new Date().toISOString() });
-  const createCase = (draft: CaseDraft) => {
+  const createCase = (draft: CaseDraft, opposingParty?: string) => {
     const id = uid(); const now = new Date().toISOString();
     const sequence = String(cases.length + 1).padStart(3, '0');
-    const item: LegalCase = { id, reference: `LEX-${new Date().getFullYear()}-${sequence}`, ...draft, createdAt: now, updatedAt: now, notes: [], tasks: [], documents: [], timeline: [{ id: uid(), title: 'Caso criado', date: now }], entities: [{ id: uid(), name: draft.client, role: 'Cliente', type: 'Pessoa' }], facts: [], legalIssues: [], missingFacts: [], collaboratorEmails: [] };
+    const item: LegalCase = { id, reference: `LEX-${new Date().getFullYear()}-${sequence}`, ...draft, createdAt: now, updatedAt: now, notes: [], tasks: [], documents: [], timeline: [{ id: uid(), title: 'Caso criado', date: now }], entities: [{ id: uid(), name: draft.client, role: 'Cliente', type: 'Pessoa' }, ...(opposingParty ? [{ id: uid(), name: opposingParty, role: 'Parte contrária', type: 'Pessoa' as const }] : [])], facts: [], legalIssues: [], missingFacts: [], collaboratorEmails: [] };
     setCases((all) => [item, ...all]);
     enqueue({ kind: 'create', item });
     return id;
