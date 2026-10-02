@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from . import llm, models
 from .db import STORAGE_DIR, get_db
-from .routers import auth, billing, cases, clients, conflicts, legal_updates, notifications, portal
+from .routers import auth, billing, calendar, cases, clients, conflicts, legal_updates, notifications, portal
 from .routers import fees  # importa também app.fees_models para Base.metadata
 from .routers import workflows  # importa também app.workflows_models para Base.metadata
 from .routers import leads  # importa também app.leads_models para Base.metadata
@@ -63,6 +63,7 @@ app.include_router(clients.router)
 app.include_router(leads.router)
 app.include_router(cases.router)
 app.include_router(conflicts.router)
+app.include_router(calendar.router)
 app.include_router(legal_updates.router)
 app.include_router(notifications.router)
 app.include_router(fees.router)

@@ -59,7 +59,7 @@ export function TaskForm({ initialCaseId, onSubmit }: { initialCaseId?: string; 
       <AppInput label="Descrição" multiline value={description} onChangeText={setDescription} placeholder="Informação, fundamento ou instruções adicionais…" />
     </FormSection>
 
-    <FormSection step={2} icon="calendar-range" title="Prazo" hint="Verificamos fins de semana e feriados nacionais." done={!!dueDate && validation.valid}>
+    <FormSection step={2} icon="calendar-range" title="Prazo" hint="Verificamos fins de semana, feriados nacionais e férias judiciais." done={!!dueDate && validation.valid}>
       <FormRow>
         <SelectField label="Natureza do prazo" value={deadlineKind} options={DEADLINE_KINDS} onChange={(value) => setDeadlineKind(value as DeadlineKind)} />
         <SelectField label="Recorrência" value={recurrence} options={RECURRENCE_RULES} onChange={(value) => setRecurrence(value as RecurrenceRule)} />
