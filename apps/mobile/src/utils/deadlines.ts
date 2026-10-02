@@ -43,6 +43,15 @@ export function portugueseNationalHoliday(date: Date) {
   return ({ 0: 'Domingo de Páscoa', '-2': 'Sexta-feira Santa', 60: 'Corpo de Deus' } as Record<number, string>)[offset] ?? null;
 }
 
+/** Férias judiciais (LOSJ art. 28.º): 22/12–3/1, Domingo de Ramos–Segunda-feira de Páscoa e 16/7–31/8. Devolve o período ou null. */
+export function judicialHolidayPeriod(date: Date) {
+  const monthDay = (date.getMonth() + 1) * 100 + date.getDate();
+  if (monthDay >= 1222 || monthDay <= 103) return 'Natal';
+  if (monthDay >= 716 && monthDay <= 831) return 'Verão';
+  const offset = Math.round((date.getTime() - easterSunday(date.getFullYear()).getTime()) / 86400000);
+  return offset >= -7 && offset <= 1 ? 'Páscoa' : null;
+}
+
 export function validateDeadline(value: string, kind: DeadlineKind) {
   if (!value) return { valid: true, warnings: [] as string[], suggestedDate: undefined as string | undefined };
   const date = parseLocalDate(value);
@@ -51,8 +60,11 @@ export function validateDeadline(value: string, kind: DeadlineKind) {
   const holiday = portugueseNationalHoliday(date);
   if (date.getDay() === 0 || date.getDay() === 6) warnings.push('A data coincide com um fim de semana.');
   if (holiday) warnings.push(`A data coincide com o feriado nacional “${holiday}”.`);
+  const judicial = kind === 'Judicial';
+  const period = judicial ? judicialHolidayPeriod(date) : null;
+  if (period) warnings.push(`A data calha nas férias judiciais (${period}): os prazos judiciais suspendem-se até ao fim do período (CPC art. 138.º), salvo em processos urgentes.`);
   let suggestion = new Date(date);
-  while (suggestion.getDay() === 0 || suggestion.getDay() === 6 || portugueseNationalHoliday(suggestion)) suggestion.setDate(suggestion.getDate() + 1);
+  while (suggestion.getDay() === 0 || suggestion.getDay() === 6 || portugueseNationalHoliday(suggestion) || (judicial && judicialHolidayPeriod(suggestion))) suggestion.setDate(suggestion.getDate() + 1);
   if (kind === 'Interno' || warnings.length === 0) suggestion = date;
   return { valid: true, warnings, suggestedDate: toLocalDate(suggestion) === value ? undefined : toLocalDate(suggestion) };
 }
@@ -77,4 +89,9 @@ if (__DEV__) {
   console.assert(normalizeExtractedDate('15/03/2026') === '2026-03-15', 'normalizeExtractedDate: DD/MM/AAAA falhou');
   console.assert(normalizeExtractedDate('31/02/2026') === null, 'normalizeExtractedDate: deveria rejeitar data inexistente');
   console.assert(normalizeExtractedDate('não é data') === null, 'normalizeExtractedDate: deveria rejeitar texto livre');
+  console.assert(validateDeadline('2026-08-10', 'Judicial').suggestedDate === '2026-09-01', 'férias judiciais: verão falhou');
+  console.assert(validateDeadline('2026-12-28', 'Judicial').suggestedDate === '2027-01-04', 'férias judiciais: Natal falhou');
+  console.assert(validateDeadline('2027-03-24', 'Judicial').suggestedDate === '2027-03-30', 'férias judiciais: Páscoa 2027 falhou');
+  console.assert(judicialHolidayPeriod(new Date(2027, 2, 20, 12)) === null && judicialHolidayPeriod(new Date(2027, 2, 21, 12)) === 'Páscoa' && judicialHolidayPeriod(new Date(2027, 2, 30, 12)) === null, 'férias judiciais: limites da Páscoa falharam');
+  console.assert(validateDeadline('2026-08-10', 'Legal').suggestedDate === undefined, 'férias judiciais: só se aplicam a prazos judiciais');
 }

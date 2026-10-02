@@ -19,6 +19,7 @@ class User(Base):
     bio: Mapped[str] = mapped_column(String(280), default="")
     role: Mapped[str] = mapped_column(String(20), default="user")
     plan: Mapped[str] = mapped_column(String(20), default="local")
+    calendarToken: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     createdAt: Mapped[str] = mapped_column(String(40))
 
 
